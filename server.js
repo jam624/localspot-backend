@@ -1,24 +1,53 @@
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import userRoutes from "./routes/userRoutes.js";
 
-const app = express();
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
+
 dotenv.config();
 
+const app = express();
+const PORT = process.env.PORT || 8000;
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-const PORT = process.env.PORT || 5000;
+app.use(cors({
+    origin: [
+       'http://127.0.0.1:5500',
 
-app.get("/health", (req, res) => {
-  try {
-    res.status(200).json({
-      message: "system check good",
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH','OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Backend is reachable",
+  });
+});
+
+// Routes
+app.use("/api/users", userRoutes);
+
+
+app.use(notFound);
+app.use(errorHandler);
+
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("MongoDB connected");
+    app.listen(PORT, () => {
+      console.log(`Server running on Port ${PORT}`);
     });
-  } catch (error) {
-    throw error.message;
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`app is listening port http://localhost${PORT}`);
-});
+  })
+  .catch((error) => {
+    console.error("MongoDB connection error:", error.message);
+  });
