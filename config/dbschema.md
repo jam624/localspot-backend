@@ -72,7 +72,7 @@ CREATE TABLE categories (
 CREATE TABLE businesses (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   account_id BIGINT UNSIGNED NULL,
-  category_id BIGINT UNSIGNED NOT NULL,
+  category_id BIGINT UNSIGNED NULL,
   name VARCHAR(180) NOT NULL,
   slug VARCHAR(220) NOT NULL,
   description TEXT NULL,
@@ -118,7 +118,8 @@ CREATE TABLE businesses (
     FOREIGN KEY (account_id) REFERENCES business_accounts(id)
     ON DELETE SET NULL,
   CONSTRAINT fk_businesses_category
-    FOREIGN KEY (category_id) REFERENCES categories(id),
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+    ON DELETE SET NULL,
   CONSTRAINT fk_businesses_approved_by
     FOREIGN KEY (approved_by) REFERENCES admins(id)
     ON DELETE SET NULL

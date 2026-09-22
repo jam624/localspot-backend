@@ -6,12 +6,12 @@
 | Domain              | Base Endpoint               | Access                    |
 | ------------------- | --------------------------- | ------------------------- |
 | Health              | `/api/v1/health`            | Public                    |
-| Consumer Discovery  | `/api/v1/discovery`         | Public                    |
-| Businesses/Listings | `/api/v1/businesses`        | Public + Auth             |
-| Categories          | `/api/v1/categories`        | Public + Admin            |
-| Promotions          | `/api/v1/promotions`        | Public + Business + Admin |
-| Favorites           | `/api/v1/favorites`         | Public                    |
-| Analytics           | `/api/v1/analytics`         | Business + Admin          |
+| Consumer Discovery  | `/api/v1/discovery`         | Public                    | Chris
+| Businesses/Listings | `/api/v1/businesses`        | Public + Auth             | James
+| Categories          | `/api/v1/categories`        | Public + Business + Admin | Divine
+| Promotions          | `/api/v1/promotions`        | Public + Business + Admin | Seri
+| Favorites           | `/api/v1/favorites`         | Public                    | Owen
+| Analytics           | `/api/v1/analytics`         | Business + Admin          | Benjamin
 | Business Auth       | `/api/v1/auth/business`     | Public                    |
 | Admin Auth          | `/api/v1/auth/admin`        | Public                    |
 | Business Portal     | `/api/v1/business`          | Business                  |
@@ -47,6 +47,8 @@ Response:
 ```
 
 ---
+<!-- CHRIS -->
+
 
 # 3. Consumer Discovery
 
@@ -85,6 +87,7 @@ returning:
 That reduces unnecessary requests.
 
 ---
+<!-- JAMES -->
 
 # 4. Search
 
@@ -133,6 +136,7 @@ GET /api/v1/discovery/popular-searches
 
 ---
 
+<!-- DIVINE -->
 # 5. Business Categories
 
 ## Public
@@ -142,6 +146,8 @@ GET /api/v1/discovery/popular-searches
 | GET    | `/api/v1/categories`                        | Get all active categories |
 | GET    | `/api/v1/categories/:categoryId`            | Get category              |
 | GET    | `/api/v1/categories/:categoryId/businesses` | Businesses in category    |
+
+
 
 Example:
 
@@ -161,6 +167,7 @@ with:
 
 ---
 
+<!-- JAMES -->
 # 6. Public Business Listings
 
 This is the core directory resource.
@@ -544,7 +551,7 @@ GET /api/v1/promotions/:promotionId
 
 | Method | Endpoint                                 |
 | ------ | ---------------------------------------- |
-| GET    | `/api/v1/business/promotions`            |
+| GET    | `/api/v1/business/promotions` PUBLIC     |
 | POST   | `/api/v1/business/promotions`            |
 | GET    | `/api/v1/business/promotions/:id`        |
 | PUT    | `/api/v1/business/promotions/:id`        |

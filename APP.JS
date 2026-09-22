@@ -3,6 +3,10 @@ import dotenv from "dotenv";
 import express from "express";
 
 import { checkDatabaseConnection } from "./config/db.js";
+import {
+  apiRateLimiter,
+  authRateLimiter,
+} from "./middleware/rateLimiter.middleware.js";
 import adminAuthRoutes from "./modules/admin-auth/routes/adminAuth.routes.js";
 import businessAuthRoutes from "./modules/business-auth/routes/businessAuth.routes.js";
 
@@ -48,8 +52,10 @@ app.get("/api/v1/health/db", async (req, res, next) => {
   }
 });
 
-app.use("/api/v1/auth/business", businessAuthRoutes);
-app.use("/api/v1/auth/admin", adminAuthRoutes);
+app.use("/api/v1/", apiRateLimiter);
+
+app.use("/api/v1/auth/business", authRateLimiter, businessAuthRoutes);
+app.use("/api/v1/auth/admin", authRateLimiter, adminAuthRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
