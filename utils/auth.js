@@ -94,6 +94,7 @@ export function verifyToken(token) {
 export function publicBusinessAccount(account) {
   return {
     id: account.id,
+    businessName: account.business_name,
     ownerName: account.owner_name,
     email: account.email,
     phone: account.phone,

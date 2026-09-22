@@ -57,6 +57,7 @@ export async function createBusinessAccount(payload) {
     await connection.beginTransaction();
 
     const [result] = await connection.execute(businessAccountStatements.create, [
+      businessName,
       ownerName,
       email,
       phone,

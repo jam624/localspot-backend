@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "server": "node --watch --env-file=.env server.js"
+    "server": "node --watch --env-file=.env server.js",
+    "migrate": "node scripts/migrate.js"
   },
   "repository": {
     "type": "git",

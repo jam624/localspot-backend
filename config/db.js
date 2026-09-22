@@ -4,10 +4,11 @@ import mysql from "mysql2/promise";
 dotenv.config();
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
+  host: (process.env.DB_HOST && process.env.DB_HOST.trim()) || "127.0.0.1",
+  port: Number(process.env.DB_PORT || 3306),
+  user: (process.env.DB_USER && process.env.DB_USER.trim()) || "root",
   password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "localspot_db",
+  database: (process.env.DB_NAME && process.env.DB_NAME.trim()) || "localspot_db",
   waitForConnections: true,
   connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   queueLimit: 0,
