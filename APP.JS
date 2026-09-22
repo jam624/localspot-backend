@@ -10,6 +10,8 @@ import {
 import adminAuthRoutes from "./modules/admin-auth/routes/adminAuth.routes.js";
 import analyticsRoutes from "./modules/analytics/routes/analytics.routes.js";
 import businessAuthRoutes from "./modules/business-auth/routes/businessAuth.routes.js";
+import discoveryRoutes from "./modules/consumer-discovery/routes/discovery.routes.js";
+import locationRoutes from "./modules/location/routes/location.routes.js";
 
 dotenv.config();
 
@@ -59,6 +61,12 @@ app.use("/api/v1/auth/business", authRateLimiter, businessAuthRoutes);
 app.use("/api/v1/auth/admin", authRateLimiter, adminAuthRoutes);
 // routes: analytics module — business + admin analytics
 app.use("/api/v1/analytics", analyticsRoutes);
+
+// Consumer Discovery — public, unauthenticated
+app.use("/api/v1/discovery", discoveryRoutes);
+
+// Location / Geocoding — public, unauthenticated
+app.use("/api/v1/location", locationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
