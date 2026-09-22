@@ -8,6 +8,7 @@ import {
   authRateLimiter,
 } from "./middleware/rateLimiter.middleware.js";
 import adminAuthRoutes from "./modules/admin-auth/routes/adminAuth.routes.js";
+import analyticsRoutes from "./modules/analytics/routes/analytics.routes.js";
 import businessAuthRoutes from "./modules/business-auth/routes/businessAuth.routes.js";
 
 dotenv.config();
@@ -56,6 +57,8 @@ app.use("/api/v1/", apiRateLimiter);
 
 app.use("/api/v1/auth/business", authRateLimiter, businessAuthRoutes);
 app.use("/api/v1/auth/admin", authRateLimiter, adminAuthRoutes);
+// routes: analytics module — business + admin analytics
+app.use("/api/v1/analytics", analyticsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
