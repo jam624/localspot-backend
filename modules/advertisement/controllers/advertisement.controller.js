@@ -1,9 +1,9 @@
-import { query } from "../config/database.js";
+import { query } from "../../../config/db.js";
 import {
   advertisementStatements as S,
   advertisementTypeStatements as T,
   advertisementSlotStatements as L,
-} from "../sql/advertisementStatements.js";
+} from "../../../sql/advertisementStatement.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
