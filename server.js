@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 
-import app from "./app.js";
+import app from "./APP.JS";
 import { checkDatabaseConnection } from "./config/db.js";
 
 dotenv.config();
