@@ -8,7 +8,8 @@ const pool = mysql.createPool({
   port: Number(process.env.DB_PORT || 3306),
   user: (process.env.DB_USER && process.env.DB_USER.trim()) || "root",
   password: process.env.DB_PASSWORD || "",
-  database: (process.env.DB_NAME && process.env.DB_NAME.trim()) || "localspot_db",
+  database:
+    (process.env.DB_NAME && process.env.DB_NAME.trim()) || "localspot_db",
   waitForConnections: true,
   connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   queueLimit: 0,
