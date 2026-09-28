@@ -2,11 +2,14 @@
   "name": "localspot-backend",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "module",
+  
   "scripts": {
     "start": "node server.js",
     "server": "node --watch --env-file=.env server.js",
-    "migrate": "node scripts/migrate.js"
+    "migrate": "node scripts/migrate.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
   },
   "repository": {
     "type": "git",
@@ -31,6 +34,9 @@
     "nodemailer": "^10.0.10"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@vitest/coverage-v8": "^5.0.1",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.0",
+    "vitest": "^5.0.1"
   }
 }
