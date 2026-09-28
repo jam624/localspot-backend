@@ -7,11 +7,14 @@ import {
   apiRateLimiter,
   authRateLimiter,
 } from "./middleware/rateLimiter.middleware.js";
+
+// --- Module Routes ---
 import adminAuthRoutes from "./modules/admin-auth/routes/adminAuth.routes.js";
 import analyticsRoutes from "./modules/analytics/routes/analytics.routes.js";
 import businessAuthRoutes from "./modules/business-auth/routes/businessAuth.routes.js";
 import discoveryRoutes from "./modules/consumer-discovery/routes/discovery.routes.js";
 import locationRoutes from "./modules/location/routes/location.routes.js";
+import advertisementRoutes from "./modules/advertisements/routes/advertisement.routes.js"; // <-- ADDED
 
 dotenv.config();
 
@@ -57,8 +60,10 @@ app.get("/api/v1/health/db", async (req, res, next) => {
 
 app.use("/api/v1/", apiRateLimiter);
 
+// --- API Routes ---
 app.use("/api/v1/auth/business", authRateLimiter, businessAuthRoutes);
 app.use("/api/v1/auth/admin", authRateLimiter, adminAuthRoutes);
+
 // routes: analytics module — business + admin analytics
 app.use("/api/v1/analytics", analyticsRoutes);
 
@@ -68,6 +73,10 @@ app.use("/api/v1/discovery", discoveryRoutes);
 // Location / Geocoding — public, unauthenticated
 app.use("/api/v1/location", locationRoutes);
 
+// Advertisements — public types/slots + business + admin management
+app.use("/api/v1/advertisements", advertisementRoutes); // <-- ADDED
+
+// --- Fallback Handlers ---
 app.use((req, res) => {
   res.status(404).json({
     message: "Route not found",
