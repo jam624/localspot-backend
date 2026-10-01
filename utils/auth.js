@@ -1,5 +1,8 @@
 import crypto from "crypto";
+import { promisify } from "node:util";
 import jwt from "jsonwebtoken";
+
+const scrypt = promisify(crypto.scrypt);
 
 // ---------------------------------------------------------------------------
 // Email helpers
@@ -27,13 +30,13 @@ export function slugify(value) {
 // Password helpers
 // ---------------------------------------------------------------------------
 
-export function hashPassword(password) {
+export async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  const hash = (await scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 })).toString("hex");
   return `scrypt:${salt}:${hash}`;
 }
 
-export function verifyPassword(password, passwordHash) {
+export async function verifyPassword(password, passwordHash) {
   const [algorithm, salt, storedHash] = String(passwordHash || "").split(":");
 
   if (algorithm !== "scrypt" || !salt || !storedHash) {
@@ -41,7 +44,7 @@ export function verifyPassword(password, passwordHash) {
   }
 
   const storedBuffer = Buffer.from(storedHash, "hex");
-  const passwordBuffer = crypto.scryptSync(password, salt, 64);
+  const passwordBuffer = await scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 });
 
   return (
     storedBuffer.length === passwordBuffer.length &&
@@ -71,13 +74,14 @@ export function generateResetToken() {
 // ---------------------------------------------------------------------------
 
 export function createBusinessToken(account) {
+  const secret = getJwtSecret();
   return jwt.sign(
     {
       sub: String(account.id),
       type: "business",
       email: account.email,
     },
-    process.env.JWT_SECRET || "localspot-dev-secret",
+    secret,
     {
       expiresIn: process.env.JWT_EXPIRES_IN || "1d",
     }
@@ -85,7 +89,16 @@ export function createBusinessToken(account) {
 }
 
 export function verifyToken(token) {
-  return jwt.verify(token, process.env.JWT_SECRET || "localspot-dev-secret");
+  return jwt.verify(token, getJwtSecret());
+}
+
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET must be configured in production");
+  }
+  return "localspot-dev-secret";
 }
 
 /**
@@ -110,6 +123,7 @@ export function publicBusinessAccount(account) {
 // ---------------------------------------------------------------------------
 
 export function createAdminToken(admin) {
+  const secret = getJwtSecret();
   return jwt.sign(
     {
       sub: String(admin.id),
@@ -117,7 +131,7 @@ export function createAdminToken(admin) {
       email: admin.email,
       role: admin.role,
     },
-    process.env.JWT_SECRET || "localspot-dev-secret",
+    secret,
     {
       expiresIn: process.env.JWT_EXPIRES_IN || "1d",
     }

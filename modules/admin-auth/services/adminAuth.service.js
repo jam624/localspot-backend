@@ -34,7 +34,7 @@ export async function loginAdmin(payload) {
 
   const [rows] = await pool.execute(adminStatements.findByEmail, [email]);
 
-  if (!rows.length || !verifyPassword(password, rows[0].password_hash)) {
+  if (!rows.length || !(await verifyPassword(password, rows[0].password_hash))) {
     throw unauthorized("Invalid email or password");
   }
 
@@ -118,7 +118,7 @@ export async function resetAdminPassword(rawToken, newPassword) {
     await connection.beginTransaction();
 
     await connection.execute(adminStatements.updatePassword, [
-      hashPassword(newPassword),
+      await hashPassword(newPassword),
       tokenRecord.admin_id,
     ]);
 

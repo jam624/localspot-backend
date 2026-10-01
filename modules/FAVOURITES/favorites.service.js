@@ -16,8 +16,8 @@
  * Follows the same raw SQL + query() pattern as discovery.service.js.
  */
 
-import { query } from "../../../config/db.js";
-import { notFound } from "../../../utils/errors.js";
+import { query } from "../../config/db.js";
+import { notFound } from "../../utils/errors.js";
 
 /** Listing statuses that are visible to unauthenticated consumers. */
 const PUBLIC_STATUSES = ["published", "active"];

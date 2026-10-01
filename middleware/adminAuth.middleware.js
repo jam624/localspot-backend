@@ -1,108 +1,25 @@
-// backend/routes/advertisementRoutes.js
+import pool from "../config/db.js";
+import { adminStatements } from "../config/statement.js";
+import { verifyToken } from "../utils/auth.js";
 
-import express from "express";
-import * as ad from "../controller/advertisementController.js"; 
-import { requireBusinessAuth } from "../middleware/businessAuth.middleware.js";
-import { requireAdminAuth } from "../middleware/adminAuth.middleware.js";
+export async function requireAdminAuth(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!token) {
+    return res.status(401).json({ message: "Authentication token required" });
+  }
 
-const router = express.Router();
-
-/* ==========================================================================
-   PUBLIC ROUTES
-   ========================================================================== */
-
-// GET /api/advertisements/types
-router.get("/types", ad.listAdvertisementTypes);
-
-// GET /api/advertisements/slots
-router.get("/slots", ad.listAdvertisementSlots);
-
-
-/* ==========================================================================
-   BUSINESS ROUTES
-   Mounted at /api/advertisements/business
-   ========================================================================== */
-
-const businessRouter = express.Router();
-
-// Your middleware is a standard (req, res, next) function, so we can use it directly
-businessRouter.use(requireBusinessAuth);
-
-// Create a new advertisement (starts as 'draft')
-businessRouter.post("/", ad.createAdvertisement);
-
-// List all advertisements owned by the logged-in business
-businessRouter.get("/", ad.listMyAdvertisements);
-
-// Get a single advertisement
-businessRouter.get("/:id", ad.getMyAdvertisement);
-
-// Update an advertisement (only 'draft' or 'rejected')
-businessRouter.put("/:id", ad.updateMyAdvertisement);
-
-// Submit for admin approval
-businessRouter.post("/:id/submit", ad.submitMyAdvertisement);
-
-// Pause a live advertisement
-businessRouter.post("/:id/pause", ad.pauseMyAdvertisement);
-
-// Resume a paused advertisement
-businessRouter.post("/:id/resume", ad.resumeMyAdvertisement);
-
-// Get impressions/clicks/CTR
-businessRouter.get("/:id/performance", ad.getMyAdvertisementPerformance);
-
-// Delete an advertisement (only 'draft' or 'rejected')
-businessRouter.delete("/:id", ad.deleteMyAdvertisement);
-
-router.use("/business", businessRouter);
-
-
-/* ==========================================================================
-   ADMIN ROUTES
-   Mounted at /api/advertisements/admin
-   ========================================================================== */
-
-const adminRouter = express.Router();
-
-// Your middleware is designed to work directly as well as with roles, 
-// so we can use it directly here to apply the DEFAULT_ADMIN_ROLES.
-adminRouter.use(requireAdminAuth);
-
-// --- Dashboard / stats ---
-adminRouter.get("/stats", ad.adminAdvertisementStats);
-
-// --- Advertisement Types Management ---
-adminRouter.get("/types", ad.adminListAdvertisementTypes);
-adminRouter.post("/types", ad.adminCreateAdvertisementType);
-adminRouter.put("/types/:id", ad.adminUpdateAdvertisementType);
-
-// --- Advertisement Slots Management ---
-adminRouter.get("/slots", ad.adminListAdvertisementSlots);
-adminRouter.post("/slots", ad.adminCreateAdvertisementSlot);
-adminRouter.put("/slots/:id", ad.adminUpdateAdvertisementSlot);
-
-// --- Advertisements Management ---
-
-// List advertisements with filters + pagination
-adminRouter.get("/", ad.adminListAdvertisements);
-
-// Get a single advertisement
-adminRouter.get("/:id", ad.adminGetAdvertisement);
-
-// Approve a pending advertisement
-adminRouter.post("/:id/approve", ad.adminApproveAdvertisement);
-
-// Reject an advertisement with a reason
-adminRouter.post("/:id/reject", ad.adminRejectAdvertisement);
-
-// Manually force a status change
-adminRouter.patch("/:id/status", ad.adminSetAdvertisementStatus);
-
-// Delete an advertisement
-adminRouter.delete("/:id", ad.adminDeleteAdvertisement);
-
-router.use("/admin", adminRouter);
-
-
-export default router;
+  let payload;
+  try { payload = verifyToken(token); }
+  catch { return res.status(401).json({ message: "Invalid or expired token" }); }
+  if (payload.type !== "admin") return res.status(403).json({ message: "Invalid account type" });
+  try {
+    const [rows] = await pool.execute(adminStatements.findById, [payload.sub]);
+    if (!rows.length || !rows[0].is_active) return res.status(401).json({ message: "Admin account is inactive or unavailable" });
+    req.admin = rows[0];
+    req.user = { id: rows[0].id, role: "admin", type: "admin" };
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}

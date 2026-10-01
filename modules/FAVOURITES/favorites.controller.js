@@ -8,7 +8,7 @@ import {
   addFavorite,
   getFavoriteBusinesses,
   removeFavorite,
-} from "../services/favorites.service.js";
+} from "./favorites.service.js";
 
 /**
  * Pulls the anonymous-tracking fields out of the request.

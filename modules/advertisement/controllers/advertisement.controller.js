@@ -113,7 +113,7 @@ async function resolveBusinessForAccount(accountId) {
  */
 export async function createAdvertisement(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const business = await resolveBusinessForAccount(accountId);
@@ -173,7 +173,7 @@ export async function createAdvertisement(req, res) {
  */
 export async function listMyAdvertisements(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const business = await resolveBusinessForAccount(accountId);
@@ -191,7 +191,7 @@ export async function listMyAdvertisements(req, res) {
  */
 export async function getMyAdvertisement(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const id = asInt(req.params.id);
@@ -217,7 +217,7 @@ export async function getMyAdvertisement(req, res) {
  */
 export async function updateMyAdvertisement(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const id = asInt(req.params.id);
@@ -289,7 +289,7 @@ export async function updateMyAdvertisement(req, res) {
  */
 export async function submitMyAdvertisement(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const id = asInt(req.params.id);
@@ -323,7 +323,7 @@ export async function submitMyAdvertisement(req, res) {
  */
 export async function pauseMyAdvertisement(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const id = asInt(req.params.id);
@@ -353,7 +353,7 @@ export async function pauseMyAdvertisement(req, res) {
  */
 export async function resumeMyAdvertisement(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const id = asInt(req.params.id);
@@ -389,7 +389,7 @@ export async function resumeMyAdvertisement(req, res) {
  */
 export async function deleteMyAdvertisement(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const id = asInt(req.params.id);
@@ -418,7 +418,7 @@ export async function deleteMyAdvertisement(req, res) {
  */
 export async function getMyAdvertisementPerformance(req, res) {
   try {
-    const accountId = req.business?.id ?? req.user?.id;
+    const accountId = req.businessAccount?.id ?? req.user?.id;
     if (!accountId) return forbidden(res);
 
     const id = asInt(req.params.id);

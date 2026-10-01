@@ -1,183 +1,129 @@
-const Business = require('../models/business.model');
-const { getLocalDayAndMinute, isOpenAt } = require('../utils/openingHours');
+import * as Business from "./business.model.js";
+import { getLocalDayAndMinute, isOpenAt } from "./openingHours.js";
 
-const { TRANSITIONS } = Business;
-
-// A foreign-key failure means the category or owner id doesn't exist.
-const asyncHandler = (fn) => async (req, res, next) => {
-  try {
-    await fn(req, res, next);
-  } catch (err) {
-    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-      return res.status(422).json({ success: false, message: 'Referenced category or owner does not exist' });
-    }
-    next(err);
-  }
+const notFound = (res) => res.status(404).json({ success: false, message: "Listing not found" });
+const incomplete = (res, missing) => res.status(422).json({ success: false, message: "Listing is incomplete", missing });
+const publicShape = (business, includeHours = false) => {
+  const { ownerId, statusReason, hours = [], ...data } = business;
+  return { ...data, isOpenNow: isOpenAt(hours, getLocalDayAndMinute()), ...(includeHours ? { hours } : {}) };
 };
 
-const notFound = (res) => res.status(404).json({ success: false, message: 'Listing not found' });
-const incomplete = (res, missing) =>
-  res.status(422).json({ success: false, message: 'Listing is incomplete', missing });
-
-/** Public shape: no owner or moderation info; adds isOpenNow. */
-function serializePublic(b, now, { includeHours = false } = {}) {
-  const { ownerId, statusReason, hours, ...rest } = b;
-  return { ...rest, isOpenNow: isOpenAt(hours, now), ...(includeHours ? { hours } : {}) };
+export async function listBusinesses(req, res, next) {
+  try {
+    const { items, total } = await Business.searchPublic(req.valid.query);
+    const { page, limit } = req.valid.query;
+    res.json({ success: true, data: items.map((item) => publicShape(item)), pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch (error) { next(error); }
 }
 
-// ---------------------------------------------------------------- PUBLIC
+export async function getBySlug(req, res, next) {
+  try {
+    const business = await Business.findPublicBySlug(req.params.slug);
+    if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+    Business.incrementViews(business.id).catch((error) => console.error("Failed to record business view:", error.message));
+    res.json({ success: true, data: publicShape(business, true) });
+  } catch (error) { next(error); }
+}
 
-exports.listBusinesses = asyncHandler(async (req, res) => {
-  const q = req.valid.query;
-  const now = getLocalDayAndMinute();
-  const { items, total } = await Business.searchPublic(q, now);
+export async function createMine(req, res, next) {
+  try {
+    const existing = await Business.listByOwner(req.businessAccount.id);
+    const draft = existing.find((item) => item.status === "draft");
+    const data = draft ? await Business.update(draft.id, req.valid.body) : await Business.create(req.valid.body, { accountId: req.businessAccount.id });
+    res.status(draft ? 200 : 201).json({ success: true, data });
+  } catch (error) { next(error); }
+}
 
-  res.json({
-    success: true,
-    data: items.map((b) => serializePublic(b, now)),
-    pagination: { page: q.page, limit: q.limit, total, pages: Math.ceil(total / q.limit) },
-  });
-});
+export async function listMine(req, res, next) {
+  try { res.json({ success: true, data: await Business.listByOwner(req.businessAccount.id) }); }
+  catch (error) { next(error); }
+}
 
-exports.getBySlug = asyncHandler(async (req, res) => {
-  const business = await Business.findPublicBySlug(req.params.slug);
-  if (!business) return res.status(404).json({ success: false, message: 'Business not found' });
+export async function getMine(req, res, next) {
+  try {
+    const item = await Business.findById(req.params.id, { accountId: req.businessAccount.id });
+    if (!item) return notFound(res);
+    res.json({ success: true, data: item });
+  } catch (error) { next(error); }
+}
 
-  // Fire-and-forget so a counter failure never breaks the page.
-  Business.incrementViews(business.id).catch(() => {});
+export async function updateMine(req, res, next) {
+  try {
+    const item = await Business.findById(req.params.id, { accountId: req.businessAccount.id });
+    if (!item) return notFound(res);
+    if (["submitted", "pending_approval"].includes(item.status)) return res.status(409).json({ success: false, message: "Listing is under review and cannot be edited" });
+    if (item.status === "suspended") return res.status(403).json({ success: false, message: "Listing is suspended. Contact support." });
+    const updated = await Business.update(item.id, req.valid.body);
+    if (item.status === "rejected") await Business.setStatus(item.id, "rejected", "draft");
+    res.json({ success: true, data: await Business.findById(updated.id, { accountId: req.businessAccount.id }) });
+  } catch (error) { next(error); }
+}
 
-  res.json({ success: true, data: serializePublic(business, getLocalDayAndMinute(), { includeHours: true }) });
-});
-
-// ---------------------------------------------------------------- BUSINESS OWNER
-
-exports.createMine = asyncHandler(async (req, res) => {
-  const business = await Business.create(req.valid.body, {
-    ownerId: req.user.id,
-    createdBy: req.user.id,
-  });
-  res.status(201).json({ success: true, data: business });
-});
-
-exports.listMine = asyncHandler(async (req, res) => {
-  res.json({ success: true, data: await Business.listByOwner(req.user.id) });
-});
-
-exports.getMine = asyncHandler(async (req, res) => {
-  const business = await Business.findById(Number(req.params.id), { ownerId: req.user.id });
-  if (!business) return notFound(res);
-  res.json({ success: true, data: business });
-});
-
-exports.updateMine = asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  const business = await Business.findById(id, { ownerId: req.user.id });
-  if (!business) return notFound(res);
-
-  if (['submitted', 'pending_approval'].includes(business.status)) {
-    return res.status(409).json({ success: false, message: 'Listing is under review and cannot be edited' });
-  }
-  if (business.status === 'suspended') {
-    return res.status(403).json({ success: false, message: 'Listing is suspended. Contact support.' });
-  }
-
-  // Editing a rejected listing puts it back to draft so it can be resubmitted.
-  const extra = business.status === 'rejected' ? { status: 'draft', status_reason: null } : {};
-  const updated = await Business.update(id, req.valid.body, extra);
-  res.json({ success: true, data: updated });
-});
-
-exports.submitMine = asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  const business = await Business.findById(id, { ownerId: req.user.id });
-  if (!business) return notFound(res);
-
-  if (business.status !== 'draft') {
-    return res.status(409).json({ success: false, message: `A ${business.status} listing cannot be submitted` });
-  }
-  const missing = Business.missingFields(business);
-  if (missing.length) return incomplete(res, missing);
-
-  if (!(await Business.setStatus(id, 'draft', 'submitted'))) {
-    return res.status(409).json({ success: false, message: 'Listing status changed. Please refresh.' });
-  }
-  res.json({ success: true, data: await Business.findById(id) });
-});
-
-// ---------------------------------------------------------------- ADMIN
-
-exports.adminList = asyncHandler(async (req, res) => {
-  const q = req.valid.query;
-  const { items, total } = await Business.adminList(q);
-  res.json({
-    success: true,
-    data: items,
-    pagination: { page: q.page, limit: q.limit, total, pages: Math.ceil(total / q.limit) },
-  });
-});
-
-exports.adminGet = asyncHandler(async (req, res) => {
-  const business = await Business.findById(Number(req.params.id));
-  if (!business) return notFound(res);
-  res.json({ success: true, data: business });
-});
-
-exports.adminCreate = asyncHandler(async (req, res) => {
-  const { owner, publish, ...data } = req.valid.body;
-
-  if (publish) {
-    // Check completeness on the input itself before writing anything.
-    const missing = Business.missingFields({
-      name: data.name, description: data.description, phone: data.phone, address: data.address,
-      city: data.city, area: data.area, category: { id: data.category }, location: data.location || null,
-    });
+export async function submitMine(req, res, next) {
+  try {
+    const item = await Business.findById(req.params.id, { accountId: req.businessAccount.id });
+    if (!item) return notFound(res);
+    if (item.status !== "draft") return res.status(409).json({ success: false, message: `A ${item.status} listing cannot be submitted` });
+    const missing = Business.missingFields(item);
     if (missing.length) return incomplete(res, missing);
-  }
+    if (!(await Business.setStatus(item.id, "draft", "submitted"))) return res.status(409).json({ success: false, message: "Listing status changed. Please refresh." });
+    res.json({ success: true, data: await Business.findById(item.id) });
+  } catch (error) { next(error); }
+}
 
-  const business = await Business.create(data, {
-    ownerId: owner || null, // null = admin-managed listing (PRD §23)
-    createdBy: req.user.id,
-    publish: !!publish,
-  });
-  res.status(201).json({ success: true, data: business });
-});
+export async function adminList(req, res, next) {
+  try {
+    const { items, total } = await Business.adminList(req.valid.query);
+    const { page, limit } = req.valid.query;
+    res.json({ success: true, data: items, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch (error) { next(error); }
+}
 
-exports.adminUpdate = asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  if (!(await Business.findById(id))) return notFound(res);
-  res.json({ success: true, data: await Business.update(id, req.valid.body) });
-});
+export async function adminGet(req, res, next) {
+  try { const item = await Business.findById(req.params.id); if (!item) return notFound(res); res.json({ success: true, data: item }); }
+  catch (error) { next(error); }
+}
 
-exports.adminSetStatus = asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  const { status, reason } = req.valid.body;
+export async function adminCreate(req, res, next) {
+  try {
+    const { owner, publish, ...data } = req.valid.body;
+    if (publish) { const missing = Business.missingFields({ ...data, category: { id: data.category }, location: data.location }); if (missing.length) return incomplete(res, missing); }
+    const item = await Business.create(data, { accountId: owner || null, publish: Boolean(publish), adminId: req.admin.id });
+    res.status(201).json({ success: true, data: item });
+  } catch (error) { next(error); }
+}
 
-  const business = await Business.findById(id);
-  if (!business) return notFound(res);
+export async function adminUpdate(req, res, next) {
+  try { if (!(await Business.findById(req.params.id))) return notFound(res); res.json({ success: true, data: await Business.update(req.params.id, req.valid.body) }); }
+  catch (error) { next(error); }
+}
 
-  if (!TRANSITIONS[business.status]?.includes(status)) {
-    return res.status(409).json({
-      success: false,
-      message: `Cannot move a listing from "${business.status}" to "${status}"`,
-      allowed: TRANSITIONS[business.status] || [],
-    });
-  }
-  if (status === 'published') {
-    const missing = Business.missingFields(business);
-    if (missing.length) return incomplete(res, missing);
-  }
+export async function adminSetStatus(req, res, next) {
+  try {
+    const { status, reason } = req.valid.body;
+    const item = await Business.findById(req.params.id);
+    if (!item) return notFound(res);
+    if (!Business.TRANSITIONS[item.status]?.includes(status)) return res.status(409).json({ success: false, message: `Cannot move a listing from ${item.status} to ${status}`, allowed: Business.TRANSITIONS[item.status] || [] });
+    if (status === "published") { const missing = Business.missingFields(item); if (missing.length) return incomplete(res, missing); }
+    if (!(await Business.setStatus(item.id, item.status, status, reason, req.admin.id))) return res.status(409).json({ success: false, message: "Listing status changed. Please refresh." });
+    res.json({ success: true, data: await Business.findById(item.id) });
+  } catch (error) { next(error); }
+}
 
-  if (!(await Business.setStatus(id, business.status, status, reason))) {
-    return res.status(409).json({ success: false, message: 'Listing status changed. Please refresh.' });
-  }
-  res.json({ success: true, data: await Business.findById(id) });
-});
-
-exports.adminSetActive = asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  if (!(await Business.setActive(id, req.valid.body.isActive))) {
-    // affectedRows is 0 both for "missing" and "already that value", so check existence
-    if (!(await Business.findById(id))) return notFound(res);
-  }
-  res.json({ success: true, data: await Business.findById(id) });
-});
+export async function adminSetActive(req, res, next) {
+  try {
+    const item = await Business.findById(req.params.id);
+    if (!item) return notFound(res);
+    if (req.valid.body.isActive && item.status === "inactive") {
+      const missing = Business.missingFields(item);
+      if (missing.length) return incomplete(res, missing);
+    } else if (req.valid.body.isActive && !["published", "active"].includes(item.status)) {
+      return res.status(409).json({ success: false, message: "Only a published listing can be reactivated" });
+    }
+    if (!req.valid.body.isActive && !["published", "active", "inactive"].includes(item.status)) {
+      return res.status(409).json({ success: false, message: "Only a published listing can be deactivated" });
+    }
+    await Business.setActive(req.params.id, req.valid.body.isActive);
+    res.json({ success: true, data: await Business.findById(req.params.id) });
+  } catch (error) { next(error); }
+}

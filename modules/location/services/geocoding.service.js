@@ -48,7 +48,7 @@ const COUNTRY_CODES =
 
 /**
  * Makes a GET request to Nominatim with a configurable timeout.
- * Throws structured errors that the global error handler in APP.JS will read.
+ * Throws structured errors that the global error handler in app.js will read.
  *
  * @param {string} path - e.g. "/search" or "/reverse"
  * @param {object} searchParams - key/value query params

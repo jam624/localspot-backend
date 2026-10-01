@@ -7,8 +7,8 @@
 | ------------------- | --------------------------- | ------------------------- |
 | Health              | `/api/v1/health`            | Public                    |
 | Consumer Discovery  | `/api/v1/discovery`         | Public                    | Chris ✅
-| Businesses/Listings | `/api/v1/businesses`        | Public + Auth             | James
-| Categories          | `/api/v1/categories`        | Public + Business + Admin | Divine
+| Businesses/Listings | `/api/v1/businesses`        | Public + Auth             | James 
+| Categories          | `/api/v1/categories`        | Public + Business + Admin | Divine 🟥
 | Promotions          | `/api/v1/promotions`        | Public + Business + Admin | Seri 🟨
 | Favorites           | `/api/v1/favorites`         | Public                    | Owen
 | Analytics           | `/api/v1/analytics`         | Business + Admin          | Benjamin ✅
@@ -1240,6 +1240,19 @@ Admin Analytics
         +
 Revenue Analytics
 ```
+
+## Transactional Email (Resend)
+
+Set these variables in `.env` to enable welcome and password-reset emails:
+
+```env
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=LocalSpot <no-reply@your-verified-domain.com>
+```
+
+Verify the sender domain in Resend before using it. `MAIL_FROM` is also accepted
+as a sender-address fallback. When `RESEND_API_KEY` is absent, email sending is
+skipped, so the API can still run locally without email credentials.
 
 ### The architecture I'd teach the class
 

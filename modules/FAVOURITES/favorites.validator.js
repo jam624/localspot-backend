@@ -20,10 +20,11 @@ export function validateListFavorites(req, res, next) {
     });
   }
 
-  const parsed = ids
-    .split(",")
-    .map((value) => parseInt(value.trim(), 10))
-    .filter((value) => Number.isInteger(value) && value > 0);
+  const parts = ids.split(",").map((value) => value.trim());
+  if (parts.some((value) => !/^[1-9]\d{0,17}$/.test(value))) {
+    return res.status(400).json({ message: "ids must be comma-separated positive integers" });
+  }
+  const parsed = parts.map(Number);
 
   if (parsed.length === 0) {
     return res.status(400).json({
@@ -47,7 +48,10 @@ export function validateListFavorites(req, res, next) {
  * Ensures businessId is a positive integer and normalises it to a Number.
  */
 export function validateBusinessId(req, res, next) {
-  const id = parseInt(req.params.businessId, 10);
+  if (!/^[1-9]\d{0,17}$/.test(req.params.businessId)) {
+    return res.status(400).json({ message: "businessId must be a positive integer" });
+  }
+  const id = Number(req.params.businessId);
 
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ message: "businessId must be a positive integer" });

@@ -61,7 +61,7 @@ export async function createBusinessAccount(payload) {
       ownerName,
       email,
       phone,
-      hashPassword(password),
+      await hashPassword(password),
     ]);
 
     const accountId = result.insertId;
@@ -109,7 +109,7 @@ export async function loginBusinessAccount(payload) {
     email,
   ]);
 
-  if (!rows.length || !verifyPassword(password, rows[0].password_hash)) {
+  if (!rows.length || !(await verifyPassword(password, rows[0].password_hash))) {
     throw unauthorized("Invalid email or password");
   }
 
@@ -196,7 +196,7 @@ export async function resetBusinessPassword(rawToken, newPassword) {
     await connection.beginTransaction();
 
     await connection.execute(businessAccountStatements.updatePassword, [
-      hashPassword(newPassword),
+      await hashPassword(newPassword),
       tokenRecord.business_account_id,
     ]);
 
