@@ -11,7 +11,10 @@ async function startServer() {
     await checkDatabaseConnection();
 
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(
+        `Server running on port http://localhost:${PORT}`,
+        `swagger is listening on http://localhost:${PORT}/api/docs/`,
+      );
     });
   } catch (error) {
     console.error("Server startup failed:", error.message);
