@@ -23,6 +23,8 @@ import businessPromotionRoutes, {
   publicRouter as publicPromotionRoutes,
 } from "./modules/promotion/routes/promotion.routes.js";
 import adminPromotionRoutes from "./modules/promotion/routes/adminPromotion.routes.js";
+import featuredListingsRoutes from "./modules/featured-listings/routes/featuredListings.routes.js";
+import adminFeaturedListingsRoutes from "./modules/featured-listings/routes/adminFeaturedListings.routes.js";
 
 const app = express();
 
@@ -142,6 +144,8 @@ app.use("/api/v1/favorites", favoritesRoutes);
 app.use("/api/v1/promotions", publicPromotionRoutes);
 app.use("/api/v1/business/promotions", businessPromotionRoutes);
 app.use("/api/v1/admin/promotions", adminPromotionRoutes);
+app.use("/api/v1/featured-listings/requests", featuredListingsRoutes);
+app.use("/api/v1/admin/featured-listings", adminFeaturedListingsRoutes);
 
 // --- Fallback Handlers ---
 app.use((req, res) => {
