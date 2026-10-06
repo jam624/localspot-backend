@@ -7,17 +7,17 @@
 | ------------------- | --------------------------- | ------------------------- |
 | Health              | `/api/v1/health`            | Public                    |
 | Consumer Discovery  | `/api/v1/discovery`         | Public                    | Chris ✅
-| Businesses/Listings | `/api/v1/businesses`        | Public + Auth             | James 
-| Categories          | `/api/v1/categories`        | Public + Business + Admin | Divine 🟥
-| Promotions          | `/api/v1/promotions`        | Public + Business + Admin | Seri 🟨
-| Favorites           | `/api/v1/favorites`         | Public                    | Owen
+| Businesses/Listings | `/api/v1/businesses`        | Public + Auth             | James ✅
+| Categories          | `/api/v1/categories`        | Public + Business + Admin | Divine ✅
+| Promotions          | `/api/v1/promotions`        | Public + Business + Admin | Seri ✅
+| Favorites           | `/api/v1/favorites`         | Public                    | Owen ✅
 | Analytics           | `/api/v1/analytics`         | Business + Admin          | Benjamin ✅
 | Business Auth       | `/api/v1/auth/business`     | Public                    | ✅
 | Admin Auth          | `/api/v1/auth/admin`        | Public                    | ✅
-| Business Portal     | `/api/v1/business`          | Business                  | -----
-| Advertising         | `/api/v1/advertisements`    | Business + Admin          | Samuel
-| Featured Listings   | `/api/v1/featured-listings` | Business + Admin          | Benjamin
-| Admin               | `/api/v1/admin`             | Admin                     | Chris
+| Business Portal     | `/api/v1/business`          | Business                  | ----- ✅
+| Advertising         | `/api/v1/advertisements`    | Business + Admin          | Samuel ✅
+| Featured Listings   | `/api/v1/featured-listings` | Business + Admin          | Benjamin ✅
+| Admin               | `/api/v1/admin`             | Admin                     | Chris ✅
 
 ---
 

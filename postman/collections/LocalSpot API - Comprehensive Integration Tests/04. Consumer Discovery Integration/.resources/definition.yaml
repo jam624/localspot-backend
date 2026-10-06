@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Consumer Discovery Integration
+order: 4000

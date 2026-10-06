@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Admin Auth Integration
+order: 2000

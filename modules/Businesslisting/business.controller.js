@@ -18,7 +18,9 @@ export async function listBusinesses(req, res, next) {
 
 export async function getBySlug(req, res, next) {
   try {
-    const business = await Business.findPublicBySlug(req.params.slug);
+    // Accept numeric id or slug (README: GET /api/v1/businesses/:businessId)
+    const key = req.params.slug ?? req.params.idOrSlug ?? req.params.id;
+    const business = await Business.findPublicByIdOrSlug(key);
     if (!business) return res.status(404).json({ success: false, message: "Business not found" });
     Business.incrementViews(business.id).catch((error) => console.error("Failed to record business view:", error.message));
     res.json({ success: true, data: publicShape(business, true) });
@@ -66,7 +68,7 @@ export async function submitMine(req, res, next) {
     if (item.status !== "draft") return res.status(409).json({ success: false, message: `A ${item.status} listing cannot be submitted` });
     const missing = Business.missingFields(item);
     if (missing.length) return incomplete(res, missing);
-    if (!(await Business.setStatus(item.id, "draft", "submitted"))) return res.status(409).json({ success: false, message: "Listing status changed. Please refresh." });
+    if (!(await Business.setStatus(item.id, "draft", "pending_approval"))) return res.status(409).json({ success: false, message: "Listing status changed. Please refresh." });
     res.json({ success: true, data: await Business.findById(item.id) });
   } catch (error) { next(error); }
 }

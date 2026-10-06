@@ -4,6 +4,12 @@ import { requireAdminAuth } from "../../middleware/adminAuth.middleware.js";
 import * as controller from "./business.controller.js";
 import { validateActive, validateAdminCreate, validateAdminList, validateAdminUpdate, validateCreate, validateId, validateSearch, validateStatus, validateUpdate } from "./business.validator.js";
 
+import {
+  getNearby, searchBusinesses, searchSuggestions,
+  getServices, getAmenities, getHours, getMedia,
+  getBusinessPromotions, getRelatedBusinesses,
+} from "./businessSubResources.js";
+
 export const publicRouter = Router();
 
 /**
@@ -77,6 +83,17 @@ publicRouter.get("/", validateSearch, controller.listBusinesses);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
+publicRouter.get("/nearby",             getNearby);
+publicRouter.get("/search/suggestions", searchSuggestions);
+publicRouter.get("/search",             searchBusinesses);
+publicRouter.get("/:id/services",  getServices);
+publicRouter.get("/:id/amenities", getAmenities);
+publicRouter.get("/:id/hours",     getHours);
+publicRouter.get("/:id/media",     getMedia);
+publicRouter.get("/:id/promotions",getBusinessPromotions);
+publicRouter.get("/:id/related",   getRelatedBusinesses);
+
+// README: GET /api/v1/businesses/:businessId — accepts numeric id or slug
 publicRouter.get("/:slug", controller.getBySlug);
 
 export const ownerRouter = Router();
@@ -341,6 +358,8 @@ adminRouter.post("/", validateAdminCreate, controller.adminCreate);
  *         $ref: '#/components/responses/NotFound'
  */
 adminRouter.get("/:id", validateId, controller.adminGet);
+// README §25 uses PUT; keep PATCH as alias for partial updates
+adminRouter.put("/:id", validateId, validateAdminUpdate, controller.adminUpdate);
 adminRouter.patch("/:id", validateId, validateAdminUpdate, controller.adminUpdate);
 
 /**
@@ -417,5 +436,28 @@ adminRouter.patch("/:id/status", validateId, validateStatus, controller.adminSet
  *         $ref: '#/components/responses/NotFound'
  */
 adminRouter.patch("/:id/active", validateId, validateActive, controller.adminSetActive);
+
+
+// Spec-aligned action endpoints (wrappers around adminSetStatus)
+function statusAction(status) {
+  return (req, res, next) => {
+    req.body = { ...req.body, status };
+    // adminSetStatus reads from req.valid.body (set by validateStatus), so we
+    // must populate it here since validateStatus is not in these route chains.
+    req.valid = { ...(req.valid || {}), body: { status, reason: req.body.reason } };
+    return controller.adminSetStatus(req, res, next);
+  };
+}
+adminRouter.post("/:id/approve",   validateId, statusAction("approved"));
+adminRouter.post("/:id/reject",    validateId, statusAction("rejected"));
+adminRouter.post("/:id/publish",   validateId, statusAction("published"));
+adminRouter.post("/:id/unpublish", validateId, statusAction("draft"));
+adminRouter.post("/:id/suspend",   validateId, statusAction("suspended"));
+adminRouter.delete("/:id",         validateId, async (req, res, next) => {
+  // Soft-delete: set listing_status to suspended and is_active to false
+  req.body = { status: "suspended" };
+  req.valid = { ...(req.valid || {}), body: { status: "suspended" } };
+  return controller.adminSetStatus(req, res, next);
+});
 
 export default publicRouter;

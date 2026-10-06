@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Admin Core & Analytics
+order: 10000

@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Admin Advertising, Promos & Featured
+order: 12000

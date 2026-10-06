@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Business Auth Integration
+order: 3000
