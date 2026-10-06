@@ -255,3 +255,142 @@ export const passwordResetStatements = {
   deleteExpired:
     "DELETE FROM password_reset_tokens WHERE expires_at < NOW()",
 };
+
+// ---------------------------------------------------------------------------
+// Featured Listing Requests statements
+// ---------------------------------------------------------------------------
+
+export const featuredListingStatements = {
+  // query: find a business listing by its account_id — params: account_id
+  findBusinessByAccountId:
+    "SELECT id, name, listing_status FROM businesses WHERE account_id = ? LIMIT 1",
+
+  // query: check for an existing non-terminal request for same business + placement
+  // guards against duplicate pending/active submissions — params: business_id, placement
+  findActivePendingByBusinessAndPlacement: `
+    SELECT id FROM featured_listing_requests
+    WHERE business_id = ?
+      AND placement = ?
+      AND status NOT IN ('rejected', 'expired', 'disabled')
+    LIMIT 1
+  `,
+
+  // query: insert a new featured listing request — params: business_id, category_id, placement, start_date, end_date
+  create: `
+    INSERT INTO featured_listing_requests
+      (business_id, category_id, placement, requested_start_date, requested_end_date, status)
+    VALUES (?, ?, ?, ?, ?, 'requested')
+  `,
+
+  // query: list all requests for a business, newest first, paginated — params: business_id, limit, offset
+  findByBusinessId: `
+    SELECT
+      flr.id, flr.placement,
+      flr.requested_start_date, flr.requested_end_date,
+      flr.status, flr.rejection_reason,
+      flr.approved_at, flr.created_at, flr.updated_at,
+      c.id AS category_id, c.name AS category_name, c.slug AS category_slug
+    FROM featured_listing_requests flr
+    LEFT JOIN categories c ON c.id = flr.category_id
+    WHERE flr.business_id = ?
+    ORDER BY flr.created_at DESC
+    LIMIT ? OFFSET ?
+  `,
+
+  // query: total request count for a business — params: business_id
+  countByBusinessId:
+    "SELECT COUNT(*) AS total FROM featured_listing_requests WHERE business_id = ?",
+
+  // query: single request scoped to a business — params: id, business_id
+  findByIdAndBusinessId: `
+    SELECT
+      flr.id, flr.placement,
+      flr.requested_start_date, flr.requested_end_date,
+      flr.status, flr.rejection_reason,
+      flr.approved_at, flr.created_at, flr.updated_at,
+      c.id AS category_id, c.name AS category_name, c.slug AS category_slug
+    FROM featured_listing_requests flr
+    LEFT JOIN categories c ON c.id = flr.category_id
+    WHERE flr.id = ? AND flr.business_id = ?
+    LIMIT 1
+  `,
+
+  // query: admin — list all requests with business info, newest first — params: limit, offset
+  adminListAll: `
+    SELECT
+      flr.id, flr.placement,
+      flr.requested_start_date, flr.requested_end_date,
+      flr.status, flr.rejection_reason,
+      flr.approved_by, flr.approved_at, flr.created_at, flr.updated_at,
+      b.id AS business_id, b.name AS business_name, b.slug AS business_slug,
+      c.id AS category_id, c.name AS category_name, c.slug AS category_slug
+    FROM featured_listing_requests flr
+    JOIN businesses b ON b.id = flr.business_id
+    LEFT JOIN categories c ON c.id = flr.category_id
+    ORDER BY flr.created_at DESC
+    LIMIT ? OFFSET ?
+  `,
+
+  // query: admin — total request count (unfiltered) — no params
+  adminCountAll:
+    "SELECT COUNT(*) AS total FROM featured_listing_requests",
+
+  // query: admin — list requests filtered by status — params: status, limit, offset
+  adminListByStatus: `
+    SELECT
+      flr.id, flr.placement,
+      flr.requested_start_date, flr.requested_end_date,
+      flr.status, flr.rejection_reason,
+      flr.approved_by, flr.approved_at, flr.created_at, flr.updated_at,
+      b.id AS business_id, b.name AS business_name, b.slug AS business_slug,
+      c.id AS category_id, c.name AS category_name, c.slug AS category_slug
+    FROM featured_listing_requests flr
+    JOIN businesses b ON b.id = flr.business_id
+    LEFT JOIN categories c ON c.id = flr.category_id
+    WHERE flr.status = ?
+    ORDER BY flr.created_at DESC
+    LIMIT ? OFFSET ?
+  `,
+
+  // query: admin — total count filtered by status — params: status
+  adminCountByStatus:
+    "SELECT COUNT(*) AS total FROM featured_listing_requests WHERE status = ?",
+
+  // query: admin — single request by ID with full business detail — params: id
+  adminFindById: `
+    SELECT
+      flr.id, flr.business_id, flr.placement,
+      flr.requested_start_date, flr.requested_end_date,
+      flr.status, flr.rejection_reason,
+      flr.approved_by, flr.approved_at, flr.created_at, flr.updated_at,
+      b.name AS business_name, b.slug AS business_slug,
+      c.id AS category_id, c.name AS category_name, c.slug AS category_slug
+    FROM featured_listing_requests flr
+    JOIN businesses b ON b.id = flr.business_id
+    LEFT JOIN categories c ON c.id = flr.category_id
+    WHERE flr.id = ?
+    LIMIT 1
+  `,
+
+  // query: admin — update status, rejection_reason, approved_by, approved_at
+  // params: status, rejection_reason, approved_by, approved_at, id
+  updateStatus: `
+    UPDATE featured_listing_requests
+    SET
+      status = ?,
+      rejection_reason = ?,
+      approved_by = ?,
+      approved_at = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `,
+
+  // query: flip the is_featured flag on a business — params: is_featured (bool), business_id
+  setBusinessFeatured:
+    "UPDATE businesses SET is_featured = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+
+  // query: count still-active featured listing requests for a business
+  // used to decide whether to unset is_featured after a disable — params: business_id
+  countActiveByBusiness:
+    "SELECT COUNT(*) AS active_count FROM featured_listing_requests WHERE business_id = ? AND status = 'active'",
+};
