@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Public Categories & Promotions Integration
+order: 6000

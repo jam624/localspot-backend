@@ -698,6 +698,96 @@ export async function adminSetAdvertisementStatus(req, res) {
 }
 
 /**
+ * POST /api/v1/admin/advertisements/:id/activate
+ * Spec-aligned lifecycle action (README §20).
+ */
+export async function adminActivateAdvertisement(req, res) {
+  try {
+    if (!req.admin) return forbidden(res);
+
+    const id = asInt(req.params.id);
+    if (!id) return bad(res, "Invalid advertisement id");
+
+    const rows = await query(S.adminFindById, [id]);
+    const ad = rows[0];
+    if (!ad) return notFound(res);
+
+    if (!["approved", "scheduled", "paused"].includes(ad.status)) {
+      return conflict(res, `Cannot activate an advertisement in status '${ad.status}'`);
+    }
+
+    if (!["approved", "scheduled", "active"].includes(ad.status)) {
+      const capacityRows = await query(L.countActiveBySlot, [ad.slot_id]);
+      const activeCount = Number(capacityRows[0]?.count) || 0;
+      const maxActive = Number(ad.max_active_campaigns) || 1;
+      if (activeCount >= maxActive) {
+        return conflict(res, `Slot '${ad.slot_code}' is at capacity (${activeCount}/${maxActive})`);
+      }
+    }
+
+    await query(S.adminSetStatus, ["active", id]);
+    const updated = await query(S.adminFindById, [id]);
+    return ok(res, updated[0]);
+  } catch (err) {
+    return serverErr(res, err);
+  }
+}
+
+/**
+ * POST /api/v1/admin/advertisements/:id/pause
+ * Spec-aligned lifecycle action (README §20).
+ */
+export async function adminPauseAdvertisement(req, res) {
+  try {
+    if (!req.admin) return forbidden(res);
+
+    const id = asInt(req.params.id);
+    if (!id) return bad(res, "Invalid advertisement id");
+
+    const rows = await query(S.adminFindById, [id]);
+    const ad = rows[0];
+    if (!ad) return notFound(res);
+
+    if (!["active", "scheduled", "approved"].includes(ad.status)) {
+      return conflict(res, `Cannot pause an advertisement in status '${ad.status}'`);
+    }
+
+    await query(S.adminSetStatus, ["paused", id]);
+    const updated = await query(S.adminFindById, [id]);
+    return ok(res, updated[0]);
+  } catch (err) {
+    return serverErr(res, err);
+  }
+}
+
+/**
+ * POST /api/v1/admin/advertisements/:id/disable
+ * Spec-aligned lifecycle action (README §20).
+ */
+export async function adminDisableAdvertisement(req, res) {
+  try {
+    if (!req.admin) return forbidden(res);
+
+    const id = asInt(req.params.id);
+    if (!id) return bad(res, "Invalid advertisement id");
+
+    const rows = await query(S.adminFindById, [id]);
+    const ad = rows[0];
+    if (!ad) return notFound(res);
+
+    if (["expired", "disabled"].includes(ad.status)) {
+      return conflict(res, `Cannot disable an advertisement in status '${ad.status}'`);
+    }
+
+    await query(S.adminSetStatus, ["disabled", id]);
+    const updated = await query(S.adminFindById, [id]);
+    return ok(res, updated[0]);
+  } catch (err) {
+    return serverErr(res, err);
+  }
+}
+
+/**
  * DELETE /api/admin/advertisements/:id
  */
 export async function adminDeleteAdvertisement(req, res) {

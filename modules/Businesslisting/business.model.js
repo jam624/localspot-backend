@@ -4,9 +4,13 @@ import { getLocalDayAndMinute } from "./openingHours.js";
 
 export const STATUS = ["draft", "submitted", "pending_approval", "approved", "published", "rejected", "suspended", "active", "inactive"];
 export const TRANSITIONS = {
-  draft: ["submitted"], submitted: ["pending_approval", "rejected"],
-  pending_approval: ["approved", "rejected"], approved: ["published", "rejected"],
-  published: ["approved", "suspended"], rejected: ["draft"], suspended: ["approved"],
+  draft: ["submitted", "pending_approval"],
+  submitted: ["pending_approval", "approved", "rejected"],
+  pending_approval: ["approved", "rejected"],
+  approved: ["published", "rejected"],
+  published: ["approved", "suspended"],
+  rejected: ["draft", "pending_approval"],
+  suspended: ["approved"],
 };
 
 const BASE_SELECT = `
@@ -77,7 +81,32 @@ export async function findById(id, { accountId, publicOnly = false } = {}) {
 }
 
 export async function findPublicBySlug(slug) {
-  const [rows] = await pool.execute(`${BASE_SELECT} WHERE b.slug = ? AND b.listing_status = 'published' LIMIT 1`, [slug]);
+  const [rows] = await pool.execute(
+    `${BASE_SELECT} WHERE b.slug = ? AND b.listing_status IN ('published', 'active') LIMIT 1`,
+    [slug],
+  );
+  if (!rows.length) return null;
+  return (await attachRelations([mapRow(rows[0])], { details: true }))[0];
+}
+
+/**
+ * Public lookup by numeric id OR slug (README: GET /api/v1/businesses/:businessId).
+ * Only published/active listings are returned.
+ */
+export async function findPublicByIdOrSlug(idOrSlug) {
+  const isNumeric = /^\d+$/.test(String(idOrSlug));
+  if (isNumeric) {
+    const [rows] = await pool.execute(
+      `${BASE_SELECT} WHERE b.id = ? AND b.listing_status IN ('published', 'active') LIMIT 1`,
+      [Number(idOrSlug)],
+    );
+    if (!rows.length) return null;
+    return (await attachRelations([mapRow(rows[0])], { details: true }))[0];
+  }
+  const [rows] = await pool.execute(
+    `${BASE_SELECT} WHERE b.slug = ? AND b.listing_status IN ('published', 'active') LIMIT 1`,
+    [idOrSlug],
+  );
   if (!rows.length) return null;
   return (await attachRelations([mapRow(rows[0])], { details: true }))[0];
 }

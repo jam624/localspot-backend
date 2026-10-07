@@ -16,6 +16,7 @@ import {
   listCategories,
   search,
 } from "../controllers/discovery.controller.js";
+import { getPopularSearches } from "../popularSearches.js";
 import {
   validateCategoryBrowse,
   validateSearch,
@@ -199,6 +200,7 @@ router.get("/promotions", getPromotions);
  *       200:
  *         description: Active advertisements.
  */
+router.get("/popular-searches", getPopularSearches);
 router.get("/advertisements", getAdvertisements);
 
 export default router;

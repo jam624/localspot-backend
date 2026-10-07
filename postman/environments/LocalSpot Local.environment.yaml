@@ -1,0 +1,24 @@
+name: LocalSpot Local
+values:
+  - key: baseUrl
+    value: ''
+  - key: adminToken
+    secret: true
+  - key: businessToken
+    secret: true
+  - key: businessId
+    value: ''
+  - key: categoryId
+    value: ''
+  - key: promotionId
+    value: ''
+  - key: adId
+    value: ''
+  - key: featuredId
+    value: ''
+  - key: ngrok-skip-browser-warning
+    value: ''
+  - key: adminEmail
+    value: ''
+  - key: adminPassword
+    value: ''

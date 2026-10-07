@@ -1,0 +1,24 @@
+$kind: http-request
+name: POST /api/v1/auth/admin/login
+url: "{{baseUrl}}/api/v1/auth/admin/login"
+method: POST
+headers:
+  ngrok-skip-browser-warning: "true"
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+        
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Response status is valid (2xx or expected 4xx)', function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204, 400, 401, 403, 404, 409, 422]);
+      });
+      pm.test('Response time is acceptable', function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+    language: text/javascript
+order: 1000

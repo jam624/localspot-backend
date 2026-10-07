@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Business Portal - Profile & Listings
+order: 8000

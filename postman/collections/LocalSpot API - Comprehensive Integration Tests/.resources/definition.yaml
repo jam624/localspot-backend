@@ -1,0 +1,6 @@
+$kind: collection
+description: "Exhaustive integration suite organized by domain. Designed for isolated component testing. Note: 1 out of 22 tests failed in the previous run—use these isolated folders to debug specific module failures without running the entire 147+ endpoint chain."
+variables:
+  baseUrl: https://countable-dimness-showcase.ngrok-free.dev
+  adminToken: ""
+  businessToken: ""
