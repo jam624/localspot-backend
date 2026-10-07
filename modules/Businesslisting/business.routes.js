@@ -384,7 +384,7 @@ adminRouter.patch("/:id", validateId, validateAdminUpdate, controller.adminUpdat
  *             properties:
  *               status:
  *                 type: string
- *                 enum: [draft, pending_review, published, rejected, suspended]
+ *                 enum: [draft, pending_approval, published, rejected, suspended]
  *                 example: published
  *               reason:
  *                 type: string
@@ -454,7 +454,7 @@ adminRouter.post("/:id/publish",   validateId, statusAction("published"));
 adminRouter.post("/:id/unpublish", validateId, statusAction("draft"));
 adminRouter.post("/:id/suspend",   validateId, statusAction("suspended"));
 adminRouter.delete("/:id",         validateId, async (req, res, next) => {
-  // Soft-delete: set listing_status to suspended and is_active to false
+  // Soft-delete by moving the listing into the suspended state.
   req.body = { status: "suspended" };
   req.valid = { ...(req.valid || {}), body: { status: "suspended" } };
   return controller.adminSetStatus(req, res, next);

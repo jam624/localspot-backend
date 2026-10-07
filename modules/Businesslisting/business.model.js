@@ -4,13 +4,15 @@ import { getLocalDayAndMinute } from "./openingHours.js";
 
 export const STATUS = ["draft", "submitted", "pending_approval", "approved", "published", "rejected", "suspended", "active", "inactive"];
 export const TRANSITIONS = {
-  draft: ["submitted", "pending_approval"],
-  submitted: ["pending_approval", "approved", "rejected"],
-  pending_approval: ["approved", "rejected"],
-  approved: ["published", "rejected"],
-  published: ["approved", "suspended"],
-  rejected: ["draft", "pending_approval"],
+  draft: ["submitted", "pending_approval", "suspended"],
+  submitted: ["pending_approval", "approved", "rejected", "suspended"],
+  pending_approval: ["approved", "rejected", "suspended"],
+  approved: ["published", "rejected", "suspended"],
+  published: ["approved", "draft", "suspended", "inactive"],
+  rejected: ["draft", "pending_approval", "suspended"],
   suspended: ["approved"],
+  active: ["draft", "inactive", "suspended"],
+  inactive: ["published", "active", "suspended"],
 };
 
 const BASE_SELECT = `
@@ -130,7 +132,7 @@ export async function adminList({ q, status, page, limit }) {
 }
 
 export async function searchPublic(filters) {
-  const where = ["b.listing_status = 'published'", "b.category_id IS NOT NULL"];
+  const where = ["b.listing_status IN ('published', 'active')", "b.category_id IS NOT NULL"];
   const params = [];
   if (filters.q) { where.push("(b.name LIKE ? OR b.description LIKE ?)"); params.push(`%${filters.q}%`, `%${filters.q}%`); }
   if (filters.category) { where.push("(c.id = ? OR c.slug = ?)"); params.push(filters.category, filters.category); }

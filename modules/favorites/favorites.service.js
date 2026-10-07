@@ -182,7 +182,7 @@ export async function addFavorite(businessId, meta = {}) {
 export async function removeFavorite(businessId, meta = {}) {
   await query(
     `INSERT INTO events (event_type, business_id, visitor_id, ip_address, user_agent)
-     VALUES ('favorite_remove', ?, ?, ?, ?)`,
+     VALUES ('favorite_remove', (SELECT id FROM businesses WHERE id = ?), ?, ?, ?)`,
     [businessId, meta.visitorId || null, meta.ipAddress || null, meta.userAgent || null]
   );
 }

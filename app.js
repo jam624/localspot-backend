@@ -31,7 +31,7 @@ import {
   ownerRouter as businessOwnerRoutes,
   adminRouter as businessAdminRoutes,
 } from "./modules/Businesslisting/business.routes.js";
-import favoritesRoutes from "./modules/FAVOURITES/favorites.routes.js";
+import favoritesRoutes from "./modules/favorites/favorites.routes.js";
 import businessPromotionRoutes, {
   publicRouter as publicPromotionRoutes,
 } from "./modules/promotion/routes/promotion.routes.js";

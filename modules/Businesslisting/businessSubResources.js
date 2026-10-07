@@ -16,6 +16,7 @@
 
 import { query } from "../../config/db.js";
 import { badRequest, notFound } from "../../utils/errors.js";
+import { getLocalDayAndMinute } from "./openingHours.js";
 
 function toNum(v) { return Number(v ?? 0); }
 
@@ -106,6 +107,12 @@ export async function searchBusinesses(req, res, next) {
     }
     if (rating) { conditions.push("b.average_rating >= ?"); params.push(parseFloat(rating)); }
     if (priceRange) { conditions.push("b.price_range = ?"); params.push(parseInt(priceRange)); }
+    if (openNow === "true") {
+      const { day, minute } = getLocalDayAndMinute();
+      const time = `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}:00`;
+      conditions.push("EXISTS (SELECT 1 FROM business_hours h WHERE h.business_id = b.id AND h.day_of_week = ? AND h.is_closed = 0 AND ((h.opens_at < h.closes_at AND ? >= h.opens_at AND ? < h.closes_at) OR (h.opens_at >= h.closes_at AND (? >= h.opens_at OR ? < h.closes_at))))");
+      params.push(day, time, time, time, time);
+    }
 
     const orderMap = {
       recommended: "b.is_featured DESC, b.average_rating DESC, b.review_count DESC",

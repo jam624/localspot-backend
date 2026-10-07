@@ -15,30 +15,31 @@ Edit `.env` and set:
 - `DB_PASSWORD` — your MariaDB/MySQL root password (empty string `""` if no password)
 - `JWT_SECRET` — any long random string (e.g. `openssl rand -hex 32`)
 
-### 3. Create the database
-In MariaDB/MySQL:
-```sql
-CREATE DATABASE localspot_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 4. Run migrations
+### 3. Run migrations
 ```bash
 npm run migrate
 ```
+The migration script creates `localspot_db` if it does not exist. The configured database user must have permission to create it.
 
-### 5. Seed an admin user
+### 4. Seed an admin user
+Generate a scrypt password hash with the same helper used by login, replacing the example with your chosen password:
+```bash
+node --input-type=module -e "import { hashPassword } from './utils/auth.js'; console.log(await hashPassword('choose-a-local-password'))"
+```
+Paste the generated hash into the SQL below. Use a different password for each environment.
+
 ```sql
 USE localspot_db;
 INSERT INTO admins (name, email, password_hash, role)
 VALUES (
   'Super Admin',
   'admin@localspot.ng',
-  '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHi2',  -- password: Admin1234!
+  '<paste-generated-scrypt-hash-here>',
   'super_admin'
 );
 ```
 
-### 6. Start the server
+### 5. Start the server
 ```bash
 npm run dev
 ```
@@ -57,7 +58,7 @@ GET http://localhost:8000/api/v1/health/db
 ### Step 2 — Admin login (get ADMIN_TOKEN)
 ```
 POST http://localhost:8000/api/v1/auth/admin/login
-Body: { "email": "admin@localspot.ng", "password": "Admin1234!" }
+Body: { "email": "admin@localspot.ng", "password": "your-chosen-local-password" }
 ```
 Save the `token` as `ADMIN_TOKEN`.
 

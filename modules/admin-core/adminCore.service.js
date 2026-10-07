@@ -28,7 +28,7 @@ export async function getAdminDashboard() {
     query(`SELECT COUNT(*) AS total FROM advertisements WHERE status IN ('submitted','pending_approval')`),
     query(`SELECT COUNT(*) AS total FROM featured_listing_requests WHERE status = 'active'`),
     query(`SELECT COUNT(*) AS total FROM promotions WHERE status = 'active' AND ends_at > NOW()`),
-    query(`SELECT COALESCE(SUM(amount), 0) AS total FROM revenue_transactions WHERE status = 'completed'`),
+    query(`SELECT COALESCE(SUM(amount), 0) AS total FROM revenue_transactions WHERE status = 'paid'`),
   ]);
 
   return {
@@ -73,8 +73,8 @@ function fmtTx(t) {
 export async function getRevenueSummary() {
   const [[totalRow], [completedRow], [pendingRow], byType] = await Promise.all([
     query(`SELECT COALESCE(SUM(amount), 0) AS total FROM revenue_transactions`),
-    query(`SELECT COALESCE(SUM(amount), 0) AS total FROM revenue_transactions WHERE status = 'completed'`),
-    query(`SELECT COALESCE(SUM(amount), 0) AS total FROM revenue_transactions WHERE status = 'pending'`),
+    query(`SELECT COALESCE(SUM(amount), 0) AS total FROM revenue_transactions WHERE status = 'paid'`),
+    query(`SELECT COALESCE(SUM(amount), 0) AS total FROM revenue_transactions WHERE status IN ('requested', 'pending_review', 'pending_payment')`),
     query(`SELECT transaction_type, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count FROM revenue_transactions GROUP BY transaction_type`),
   ]);
 

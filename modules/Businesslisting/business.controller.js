@@ -105,6 +105,7 @@ export async function adminSetStatus(req, res, next) {
     const { status, reason } = req.valid.body;
     const item = await Business.findById(req.params.id);
     if (!item) return notFound(res);
+    if (item.status === status) return res.json({ success: true, data: item });
     if (!Business.TRANSITIONS[item.status]?.includes(status)) return res.status(409).json({ success: false, message: `Cannot move a listing from ${item.status} to ${status}`, allowed: Business.TRANSITIONS[item.status] || [] });
     if (status === "published") { const missing = Business.missingFields(item); if (missing.length) return incomplete(res, missing); }
     if (!(await Business.setStatus(item.id, item.status, status, reason, req.admin.id))) return res.status(409).json({ success: false, message: "Listing status changed. Please refresh." });
