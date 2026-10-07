@@ -172,6 +172,42 @@ export function transformNominatimResult(item) {
  * @param {number} limit - Max results to return (1–10, default 5)
  * @returns {Promise<Array>}
  */
+
+// Local fallback for common Nigerian places when Nominatim is unreachable
+const LOCAL_LOCATION_FALLBACKS = [
+  { q: ["gra", "g.r.a"], displayName: "GRA, Port Harcourt, Rivers, Nigeria", latitude: 4.8156, longitude: 7.0498, city: "Port Harcourt", area: "GRA", state: "Rivers" },
+  { q: ["port harcourt", "portharcourt", "ph"], displayName: "Port Harcourt, Rivers, Nigeria", latitude: 4.8156, longitude: 7.0498, city: "Port Harcourt", area: null, state: "Rivers" },
+  { q: ["trans amadi", "transamadi"], displayName: "Trans Amadi, Port Harcourt, Rivers, Nigeria", latitude: 4.8065, longitude: 7.0336, city: "Port Harcourt", area: "Trans Amadi", state: "Rivers" },
+  { q: ["rumuola"], displayName: "Rumuola, Port Harcourt, Rivers, Nigeria", latitude: 4.8370, longitude: 7.0005, city: "Port Harcourt", area: "Rumuola", state: "Rivers" },
+  { q: ["lagos"], displayName: "Lagos, Nigeria", latitude: 6.5244, longitude: 3.3792, city: "Lagos", area: null, state: "Lagos" },
+  { q: ["abuja"], displayName: "Abuja, Federal Capital Territory, Nigeria", latitude: 9.0765, longitude: 7.3986, city: "Abuja", area: null, state: "FCT" },
+  { q: ["ikeja"], displayName: "Ikeja, Lagos, Nigeria", latitude: 6.6018, longitude: 3.3515, city: "Ikeja", area: "Ikeja", state: "Lagos" },
+];
+
+function localFallbackSearch(q, limit = 5) {
+  const needle = String(q || "").trim().toLowerCase();
+  if (!needle) return [];
+  const hits = [];
+  for (const item of LOCAL_LOCATION_FALLBACKS) {
+    if (item.q.some((alias) => needle.includes(alias) || alias.includes(needle))) {
+      hits.push({
+        displayName: item.displayName,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        address: {
+          road: null,
+          neighbourhood: item.area,
+          city: item.city,
+          state: item.state,
+          country: "Nigeria",
+          postcode: null,
+        },
+      });
+    }
+  }
+  return hits.slice(0, limit);
+}
+
 export async function searchLocation(q, limit = 5) {
   const trimmed = q ? String(q).trim() : "";
 
@@ -179,11 +215,13 @@ export async function searchLocation(q, limit = 5) {
     return [];
   }
 
+  const safeLimit = Math.min(10, Math.max(1, Number(limit) || 5));
+
   const params = {
     q: trimmed,
     format: "jsonv2",
     addressdetails: 1,
-    limit: Math.min(10, Math.max(1, Number(limit) || 5)),
+    limit: safeLimit,
   };
 
   // Restrict to configured country codes (default: Nigeria)
@@ -191,13 +229,17 @@ export async function searchLocation(q, limit = 5) {
     params.countrycodes = COUNTRY_CODES;
   }
 
-  const data = await nominatimFetch("/search", params);
-
-  if (!Array.isArray(data)) {
-    return [];
+  try {
+    const data = await nominatimFetch("/search", params);
+    if (Array.isArray(data) && data.length) {
+      return data.map(transformNominatimResult).filter(Boolean);
+    }
+  } catch (err) {
+    // Fall through to local catalog
+    console.warn("[geocoding] Nominatim unavailable, using local fallback:", err.message);
   }
 
-  return data.map(transformNominatimResult).filter(Boolean);
+  return localFallbackSearch(trimmed, safeLimit);
 }
 
 // ---------------------------------------------------------------------------

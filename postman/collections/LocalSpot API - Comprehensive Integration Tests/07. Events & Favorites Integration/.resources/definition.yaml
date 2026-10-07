@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Events & Favorites Integration
+order: 7000

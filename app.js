@@ -10,14 +10,27 @@ import {
   authRateLimiter,
 } from "./middleware/rateLimiter.middleware.js";
 
-// --- Module Routes ---
+// --- Existing Module Routes ---
 import adminAuthRoutes from "./modules/admin-auth/routes/adminAuth.routes.js";
 import analyticsRoutes from "./modules/analytics/routes/analytics.routes.js";
+import {
+  businessAnalytics,
+  adminAnalyticsOverview, adminAnalyticsTraffic, adminAnalyticsBusinesses,
+  adminAnalyticsCategories, adminAnalyticsLocations, adminAnalyticsAdvertising,
+  adminAnalyticsRevenue,
+} from "./modules/analytics/controllers/analytics.controller.js";
+import { validateAnalyticsQuery } from "./modules/analytics/validators/analytics.validator.js";
+import { requireBusinessAuth } from "./middleware/businessAuth.middleware.js";
+import { requireAdminAuth } from "./middleware/adminAuth.middleware.js";
 import businessAuthRoutes from "./modules/business-auth/routes/businessAuth.routes.js";
 import discoveryRoutes from "./modules/consumer-discovery/routes/discovery.routes.js";
 import locationRoutes from "./modules/location/routes/location.routes.js";
-import advertisementRoutes from "./modules/advertisement/routes/advertisement.route.js";
-import { publicRouter as businessPublicRoutes, ownerRouter as businessOwnerRoutes, adminRouter as businessAdminRoutes } from "./modules/Businesslisting/business.routes.js";
+import advertisementRoutes, { businessRouter as adBusinessRouter, adminRouter as adAdminRouter } from "./modules/advertisement/routes/advertisement.route.js";
+import {
+  publicRouter as businessPublicRoutes,
+  ownerRouter as businessOwnerRoutes,
+  adminRouter as businessAdminRoutes,
+} from "./modules/Businesslisting/business.routes.js";
 import favoritesRoutes from "./modules/FAVOURITES/favorites.routes.js";
 import businessPromotionRoutes, {
   publicRouter as publicPromotionRoutes,
@@ -25,6 +38,13 @@ import businessPromotionRoutes, {
 import adminPromotionRoutes from "./modules/promotion/routes/adminPromotion.routes.js";
 import featuredListingsRoutes from "./modules/featured-listings/routes/featuredListings.routes.js";
 import adminFeaturedListingsRoutes from "./modules/featured-listings/routes/adminFeaturedListings.routes.js";
+
+// --- NEW Module Routes ---
+import eventsRoutes from "./modules/events/events.routes.js";
+import categoriesRoutes from "./modules/categories/routes/categories.routes.js";
+import adminCategoriesRoutes from "./modules/categories/routes/adminCategories.routes.js";
+import businessPortalRoutes from "./modules/business-portal/routes/portal.routes.js";
+import adminCoreRoutes from "./modules/admin-core/routes/adminCore.routes.js";
 
 const app = express();
 
@@ -50,71 +70,18 @@ app.use(
   })
 );
 
-/**
- * @openapi
- * /health:
- *   get:
- *     tags: [System]
- *     summary: Root and API v1 service health check
- *     responses:
- *       200:
- *         description: Service is healthy.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: ok
- *                 service:
- *                   type: string
- *                   example: localspot-api
- */
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    service: "localspot-api",
-  });
+  res.status(200).json({ status: "ok", service: "localspot-api" });
 });
 
 app.get("/api/v1/health", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    service: "localspot-api",
-  });
+  res.status(200).json({ status: "ok", service: "localspot-api" });
 });
 
-/**
- * @openapi
- * /health/db:
- *   get:
- *     tags: [System]
- *     summary: Database connectivity health check
- *     responses:
- *       200:
- *         description: Database is connected.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: ok
- *                 database:
- *                   type: string
- *                   example: connected
- *       500:
- *         description: Database connection failed.
- */
 app.get("/api/v1/health/db", async (req, res, next) => {
   try {
     await checkDatabaseConnection();
-    res.status(200).json({
-      status: "ok",
-      database: "connected",
-    });
+    res.status(200).json({ status: "ok", database: "connected" });
   } catch (error) {
     next(error);
   }
@@ -122,36 +89,76 @@ app.get("/api/v1/health/db", async (req, res, next) => {
 
 app.use("/api/v1/", apiRateLimiter);
 
-// --- API Routes ---
+// ── Auth ──────────────────────────────────────────────────────────────────────
 app.use("/api/v1/auth/business", authRateLimiter, businessAuthRoutes);
 app.use("/api/v1/auth/admin", authRateLimiter, adminAuthRoutes);
 
-// routes: analytics module — business + admin analytics
+// ── Analytics ─────────────────────────────────────────────────────────────────
+// Primary analytics paths
 app.use("/api/v1/analytics", analyticsRoutes);
+// Spec-aligned alias: GET /api/v1/business/analytics -> same as /analytics/business
+app.get("/api/v1/business/analytics", requireBusinessAuth, validateAnalyticsQuery, businessAnalytics);
+// Spec-aligned admin analytics aliases
+app.get("/api/v1/admin/analytics/overview",    requireAdminAuth, validateAnalyticsQuery, adminAnalyticsOverview);
+app.get("/api/v1/admin/analytics/traffic",     requireAdminAuth, validateAnalyticsQuery, adminAnalyticsTraffic);
+app.get("/api/v1/admin/analytics/businesses",  requireAdminAuth, validateAnalyticsQuery, adminAnalyticsBusinesses);
+app.get("/api/v1/admin/analytics/categories",  requireAdminAuth, validateAnalyticsQuery, adminAnalyticsCategories);
+app.get("/api/v1/admin/analytics/locations",   requireAdminAuth, validateAnalyticsQuery, adminAnalyticsLocations);
+app.get("/api/v1/admin/analytics/advertising", requireAdminAuth, validateAnalyticsQuery, adminAnalyticsAdvertising);
+app.get("/api/v1/admin/analytics/revenue",     requireAdminAuth, validateAnalyticsQuery, adminAnalyticsRevenue);
 
-// Consumer Discovery — public, unauthenticated
+// ── Events (NEW) ──────────────────────────────────────────────────────────────
+app.use("/api/v1/events", eventsRoutes);
+
+// ── Consumer Discovery ────────────────────────────────────────────────────────
 app.use("/api/v1/discovery", discoveryRoutes);
 
-// Location / Geocoding — public, unauthenticated
+// ── Location / Geocoding ──────────────────────────────────────────────────────
 app.use("/api/v1/location", locationRoutes);
+app.use("/api/v1/locations", locationRoutes);    // spec uses plural
 
-// Advertisements — public types/slots + business + admin management
-app.use("/api/v1/advertisements", advertisementRoutes);
+// ── Businesses (public) ───────────────────────────────────────────────────────
 app.use("/api/v1/businesses", businessPublicRoutes);
-app.use("/api/v1/portal/businesses", businessOwnerRoutes);
-app.use("/api/v1/admin/businesses", businessAdminRoutes);
-app.use("/api/v1/favorites", favoritesRoutes);
-app.use("/api/v1/promotions", publicPromotionRoutes);
-app.use("/api/v1/business/promotions", businessPromotionRoutes);
-app.use("/api/v1/admin/promotions", adminPromotionRoutes);
-app.use("/api/v1/featured-listings/requests", featuredListingsRoutes);
-app.use("/api/v1/admin/featured-listings", adminFeaturedListingsRoutes);
 
-// --- Fallback Handlers ---
+// ── Categories (standalone — NEW) ────────────────────────────────────────────
+app.use("/api/v1/categories", categoriesRoutes);
+
+// ── Promotions (public) ───────────────────────────────────────────────────────
+app.use("/api/v1/promotions", publicPromotionRoutes);
+
+// ── Favorites ─────────────────────────────────────────────────────────────────
+app.use("/api/v1/favorites", favoritesRoutes);
+
+// ── Advertisements (business + admin) ────────────────────────────────────────
+app.use("/api/v1/advertisements", advertisementRoutes);
+// Spec-aligned: business CRUD at /advertisements directly (without /business sub-path)
+app.use("/api/v1/advertisements", adBusinessRouter);
+// Admin advertisement management
+app.use("/api/v1/admin/advertisements", adAdminRouter);
+
+// ── Featured Listings ─────────────────────────────────────────────────────────
+app.use("/api/v1/featured-listings/requests", featuredListingsRoutes);
+
+// ── Business Portal ───────────────────────────────────────────────────────────
+// Existing: portal/businesses (create/list/update listings)
+app.use("/api/v1/portal/businesses", businessOwnerRoutes);
+// Business analytics alias (must be before the /business catch-all)
+// (already registered above as app.get)
+// Business promotions — MUST be before /business portal catch-all
+app.use("/api/v1/business/promotions", businessPromotionRoutes);
+// NEW: /business/* routes (dashboard, profile, media, listing lifecycle)
+app.use("/api/v1/business", businessPortalRoutes);
+
+// ── Admin ──────────────────────────────────────────────────────────────────────
+app.use("/api/v1/admin/businesses", businessAdminRoutes);
+app.use("/api/v1/admin/promotions", adminPromotionRoutes);
+app.use("/api/v1/admin/featured-listings", adminFeaturedListingsRoutes);
+app.use("/api/v1/admin/categories", adminCategoriesRoutes);   // NEW
+app.use("/api/v1/admin", adminCoreRoutes);                    // NEW — dashboard + revenue
+
+// ── Fallbacks ─────────────────────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({
-    message: "Route not found",
-  });
+  res.status(404).json({ message: "Route not found" });
 });
 
 app.use((error, req, res, next) => {
@@ -165,8 +172,10 @@ app.use((error, req, res, next) => {
   }
 
   const status = error.statusCode || 500;
+  // Surface client + upstream service errors (4xx, 503, 504); hide unexpected 500s
+  const expose = status < 500 || status === 503 || status === 504;
   return res.status(status).json({
-    message: status < 500 ? error.message : "Something went wrong",
+    message: expose ? (error.message || "Request failed") : "Something went wrong",
   });
 });
 

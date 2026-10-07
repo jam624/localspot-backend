@@ -37,6 +37,7 @@ router.get("/types", ad.listAdvertisementTypes);
  *         description: List of advertisement placement slots.
  */
 router.get("/slots", ad.listAdvertisementSlots);
+router.get("/inventory", ad.listAdvertisementSlots);   // spec alias
 
 /* ==========================================================================
    BUSINESS ROUTES
@@ -531,6 +532,72 @@ adminRouter.post("/:id/reject", ad.adminRejectAdvertisement);
 
 /**
  * @openapi
+ * /admin/advertisements/{id}/activate:
+ *   post:
+ *     tags: [Advertisements - Admin]
+ *     summary: Activate an approved/scheduled/paused advertisement (Admin)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Advertisement activated.
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       409:
+ *         description: Invalid status transition or slot at capacity.
+ */
+adminRouter.post("/:id/activate", ad.adminActivateAdvertisement);
+
+/**
+ * @openapi
+ * /admin/advertisements/{id}/pause:
+ *   post:
+ *     tags: [Advertisements - Admin]
+ *     summary: Pause an active/scheduled/approved advertisement (Admin)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Advertisement paused.
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       409:
+ *         description: Invalid status transition.
+ */
+adminRouter.post("/:id/pause", ad.adminPauseAdvertisement);
+
+/**
+ * @openapi
+ * /admin/advertisements/{id}/disable:
+ *   post:
+ *     tags: [Advertisements - Admin]
+ *     summary: Disable an advertisement (Admin)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Advertisement disabled.
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       409:
+ *         description: Invalid status transition.
+ */
+adminRouter.post("/:id/disable", ad.adminDisableAdvertisement);
+
+/**
+ * @openapi
  * /advertisements/admin/{id}/status:
  *   patch:
  *     tags: [Advertisements - Admin]
@@ -549,7 +616,7 @@ adminRouter.post("/:id/reject", ad.adminRejectAdvertisement);
  *             type: object
  *             required: [status]
  *             properties:
- *               status: { type: string, enum: [draft, pending_approval, approved, rejected, scheduled, active, paused, expired] }
+ *               status: { type: string, enum: [draft, pending_approval, approved, rejected, scheduled, active, paused, expired, disabled] }
  *     responses:
  *       200:
  *         description: Advertisement status updated.
@@ -563,3 +630,6 @@ adminRouter.patch("/:id/status", ad.adminSetAdvertisementStatus);
 router.use("/admin", adminRouter);
 
 export default router;
+// Named exports for alternative mounting
+export { businessRouter, adminRouter };
+

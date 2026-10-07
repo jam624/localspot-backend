@@ -1,0 +1,3 @@
+$kind: collection
+description: Integration tests for Public Business & Location Integration
+order: 5000
