@@ -43,6 +43,5 @@ export function validateEvent(req, res, next) {
   if (platform !== undefined && typeof platform !== "string") {
     return res.status(400).json({ message: "platform must be a string" });
   }
-
   return next();
 }

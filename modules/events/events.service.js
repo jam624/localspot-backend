@@ -13,6 +13,7 @@ export async function trackEvent(body, req) {
   } = body;
 
   const visitorId = req.headers["x-visitor-id"] || null;
+  const userId = req.user?.type === "user" ? req.user.id : null;
   const ip = req.ip || req.headers["x-forwarded-for"] || null;
   const userAgent = req.headers["user-agent"] || null;
   const referrer = req.headers["referer"] || null;
@@ -20,8 +21,8 @@ export async function trackEvent(body, req) {
   await query(
     `INSERT INTO events
       (event_type, business_id, advertisement_id, promotion_id, category_id,
-       search_query, platform, visitor_id, ip_address, user_agent, referrer, metadata)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       search_query, platform, visitor_id, user_id, ip_address, user_agent, referrer, metadata)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       event,
       businessId ? Number(businessId) : null,
@@ -31,6 +32,7 @@ export async function trackEvent(body, req) {
       searchQuery || null,
       platform || null,
       visitorId,
+      userId,
       ip,
       userAgent,
       referrer,

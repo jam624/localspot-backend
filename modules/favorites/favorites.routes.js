@@ -1,7 +1,7 @@
 /**
- * Favorites Routes
- * All endpoints are public — no authentication required (no consumer
- * accounts in V1). Mounted at /api/v1/favorites in app.js.
+ * Favorites Routes (V2 — user auth required)
+ * All endpoints protected by requireUserAuth.
+ * Mounted at /api/v1/favorites in app.js.
  */
 
 import { Router } from "express";
@@ -11,72 +11,75 @@ import {
   listFavorites,
   unfavorite,
 } from "./favorites.controller.js";
-import {
-  validateBusinessId,
-  validateListFavorites,
-} from "./favorites.validator.js";
+import { validateBusinessId } from "./favorites.validator.js";
+import { requireUserAuth } from "../../middleware/userAuth.middleware.js";
 
 const router = Router();
+
+// All favorites routes require a logged-in consumer user
+router.use(requireUserAuth);
 
 /**
  * @openapi
  * /favorites:
  *   get:
  *     tags: [Favorites]
- *     summary: Bulk-fetch favorites by business IDs
- *     description: Fetches listing cards for the comma-separated business IDs stored locally on consumer client.
- *     parameters:
- *       - in: query
- *         name: ids
- *         required: true
- *         schema: { type: string }
- *         description: Comma-separated business IDs (e.g. "12,45,90")
+ *     summary: Get the authenticated user's saved businesses
+ *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200:
- *         description: List of favorite business cards.
- *       400:
- *         $ref: '#/components/responses/ValidationError'
+ *         description: List of favorited business cards.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 businesses:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
-router.get("/", validateListFavorites, listFavorites);
+router.get("/", listFavorites);
 
 /**
  * @openapi
  * /favorites/{businessId}:
  *   post:
  *     tags: [Favorites]
- *     summary: Save a business to favorites
+ *     summary: Save a business to the user's favorites
+ *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
  *         name: businessId
  *         required: true
  *         schema: { type: integer }
- *       - in: header
- *         name: x-visitor-id
- *         schema: { type: string }
- *         description: Optional anonymous tracking identifier
  *     responses:
  *       201:
  *         description: Added to favorites.
  *       400:
  *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
  *   delete:
  *     tags: [Favorites]
- *     summary: Remove a business from favorites
+ *     summary: Remove a business from the user's favorites
+ *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
  *         name: businessId
  *         required: true
  *         schema: { type: integer }
- *       - in: header
- *         name: x-visitor-id
- *         schema: { type: string }
  *     responses:
  *       200:
  *         description: Removed from favorites.
  *       400:
  *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
 router.post("/:businessId", validateBusinessId, favorite);
 router.delete("/:businessId", validateBusinessId, unfavorite);

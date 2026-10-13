@@ -238,8 +238,8 @@ export async function setActive(id, active) {
   return result.affectedRows === 1;
 }
 
-export async function incrementViews(id) {
-  await pool.execute("INSERT INTO events (event_type, business_id) VALUES ('business_view', ?)", [id]);
+export async function incrementViews(id, userId = null) {
+  await pool.execute("INSERT INTO events (event_type, business_id, user_id) VALUES ('business_view', ?, ?)", [id, userId]);
 }
 
 export function missingFields(business) {

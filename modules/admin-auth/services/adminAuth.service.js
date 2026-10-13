@@ -77,8 +77,9 @@ export async function forgotAdminPassword(email) {
 
   await pool.execute(passwordResetStatements.create, [
     "admin",
-    null,
-    admin.id,
+    null,           // business_account_id
+    admin.id,       // admin_id
+    null,           // user_id
     tokenHash,
     expiresAt,
   ]);

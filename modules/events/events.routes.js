@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { recordEvent } from "./events.controller.js";
 import { validateEvent } from "./events.validator.js";
+import { optionalUserAuth } from "../../middleware/userAuth.middleware.js";
 
 const router = Router();
 
@@ -36,6 +37,6 @@ const router = Router();
  *       400:
  *         $ref: '#/components/responses/ValidationError'
  */
-router.post("/", validateEvent, recordEvent);
+router.post("/", optionalUserAuth, validateEvent, recordEvent);
 
 export default router;

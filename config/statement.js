@@ -50,6 +50,53 @@ export const adminStatements = {
 };
 
 // ---------------------------------------------------------------------------
+// Consumer User statements
+// ---------------------------------------------------------------------------
+
+export const userStatements = {
+  findByEmail:
+    "SELECT id, name, email, password_hash, status, email_verified_at, last_login_at, created_at FROM users WHERE email = ? LIMIT 1",
+
+  findById:
+    "SELECT id, name, email, status, email_verified_at, last_login_at, created_at FROM users WHERE id = ? LIMIT 1",
+
+  create:
+    "INSERT INTO users (name, email, password_hash, status) VALUES (?, ?, ?, 'active')",
+
+  updateLastLogin:
+    "UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?",
+
+  updatePassword:
+    "UPDATE users SET password_hash = ? WHERE id = ?",
+};
+
+// ---------------------------------------------------------------------------
+// User Favorites statements
+// ---------------------------------------------------------------------------
+
+export const userFavoriteStatements = {
+  /** Check if a user has already favorited a business — params: user_id, business_id */
+  exists:
+    "SELECT 1 FROM user_favorites WHERE user_id = ? AND business_id = ? LIMIT 1",
+
+  /** Add a favorite — params: user_id, business_id */
+  add:
+    "INSERT IGNORE INTO user_favorites (user_id, business_id) VALUES (?, ?)",
+
+  /** Remove a favorite — params: user_id, business_id */
+  remove:
+    "DELETE FROM user_favorites WHERE user_id = ? AND business_id = ?",
+
+  /** List all business_ids favorited by a user (for bulk card fetch) — params: user_id */
+  listIdsByUser:
+    "SELECT business_id FROM user_favorites WHERE user_id = ? ORDER BY created_at DESC",
+
+  /** Count favorites for a user — params: user_id */
+  countByUser:
+    "SELECT COUNT(*) AS total FROM user_favorites uf JOIN businesses b ON b.id = uf.business_id WHERE uf.user_id = ? AND b.listing_status IN ('published', 'active')",
+};
+
+// ---------------------------------------------------------------------------
 // Analytics statements
 // ---------------------------------------------------------------------------
 
@@ -230,17 +277,17 @@ export const analyticsStatements = {
 export const passwordResetStatements = {
   /**
    * Insert a new reset token.
-   * Params: account_type, business_account_id, admin_id, token_hash, expires_at
+   * Params: account_type, business_account_id, admin_id, user_id, token_hash, expires_at
    */
   create:
-    "INSERT INTO password_reset_tokens (account_type, business_account_id, admin_id, token_hash, expires_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO password_reset_tokens (account_type, business_account_id, admin_id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
 
   /**
    * Find a valid (unused, non-expired) token by its hash.
    * Params: token_hash
    */
   findByTokenHash:
-    "SELECT id, account_type, business_account_id, admin_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW() LIMIT 1",
+    "SELECT id, account_type, business_account_id, admin_id, user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW() LIMIT 1",
 
   /**
    * Mark a token as used.

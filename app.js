@@ -12,6 +12,7 @@ import {
 
 // --- Existing Module Routes ---
 import adminAuthRoutes from "./modules/admin-auth/routes/adminAuth.routes.js";
+import userAuthRoutes from "./modules/user-auth/routes/userAuth.routes.js";
 import analyticsRoutes from "./modules/analytics/routes/analytics.routes.js";
 import {
   businessAnalytics,
@@ -32,6 +33,8 @@ import {
   adminRouter as businessAdminRoutes,
 } from "./modules/Businesslisting/business.routes.js";
 import favoritesRoutes from "./modules/favorites/favorites.routes.js";
+import reservationsRoutes from "./modules/reservations/reservations.routes.js";
+import businessReservationsRoutes from "./modules/reservations/businessReservations.routes.js";
 import businessPromotionRoutes, {
   publicRouter as publicPromotionRoutes,
 } from "./modules/promotion/routes/promotion.routes.js";
@@ -92,6 +95,7 @@ app.use("/api/v1/", apiRateLimiter);
 // ── Auth ──────────────────────────────────────────────────────────────────────
 app.use("/api/v1/auth/business", authRateLimiter, businessAuthRoutes);
 app.use("/api/v1/auth/admin", authRateLimiter, adminAuthRoutes);
+app.use("/api/v1/auth/user", authRateLimiter, userAuthRoutes);
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
 // Primary analytics paths
@@ -128,6 +132,7 @@ app.use("/api/v1/promotions", publicPromotionRoutes);
 
 // ── Favorites ─────────────────────────────────────────────────────────────────
 app.use("/api/v1/favorites", favoritesRoutes);
+app.use("/api/v1/reservations", reservationsRoutes);
 
 // ── Advertisements (business + admin) ────────────────────────────────────────
 app.use("/api/v1/advertisements", advertisementRoutes);
@@ -146,6 +151,7 @@ app.use("/api/v1/portal/businesses", businessOwnerRoutes);
 // (already registered above as app.get)
 // Business promotions — MUST be before /business portal catch-all
 app.use("/api/v1/business/promotions", businessPromotionRoutes);
+app.use("/api/v1/business/reservations", businessReservationsRoutes);
 // NEW: /business/* routes (dashboard, profile, media, listing lifecycle)
 app.use("/api/v1/business", businessPortalRoutes);
 

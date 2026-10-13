@@ -65,6 +65,15 @@ const controllerMocks = vi.hoisted(() => {
       "registerBusinessAccount",
       "resetPassword",
     ]),
+    userAuth: handlers("userAuth", [
+      "forgotPassword",
+      "getCurrentUser",
+      "login",
+      "logout",
+      "registerUser",
+      "resetPassword",
+      "updateProfile",
+    ]),
     business: {
       ...handlers("business", [
         "adminCreate",
@@ -192,8 +201,20 @@ vi.mock("../middleware/businessAuth.middleware.js", () => ({
   },
 }));
 
+vi.mock("../middleware/userAuth.middleware.js", () => ({
+  requireUserAuth: (req, _res, next) => {
+    req.currentUser = { id: 1, name: "Test User", status: "active" };
+    req.user = { id: 1, role: "user", type: "user" };
+    next();
+  },
+  optionalUserAuth: (_req, _res, next) => next(),
+}));
+
 vi.mock("../modules/admin-auth/controllers/adminAuth.controller.js", () =>
   controllerMocks.adminAuth
+);
+vi.mock("../modules/user-auth/controllers/userAuth.controller.js", () =>
+  controllerMocks.userAuth
 );
 vi.mock("../modules/analytics/controllers/analytics.controller.js", () =>
   controllerMocks.analytics
@@ -335,6 +356,14 @@ const endpointCases = [
   ["get", "/api/v1/auth/business/me", "businessAuth.getCurrentBusinessAccount"],
   ["post", "/api/v1/auth/business/forgot-password", "businessAuth.forgotPassword", { email: "owner@example.test" }],
   ["post", "/api/v1/auth/business/reset-password", "businessAuth.resetPassword", { token: "reset-token", password: "password123" }],
+
+  ["post", "/api/v1/auth/user/register", "userAuth.registerUser", { name: "Jane Doe", email: "jane@example.test", password: "password123" }],
+  ["post", "/api/v1/auth/user/login", "userAuth.login", { email: "jane@example.test", password: "password123" }],
+  ["post", "/api/v1/auth/user/logout", "userAuth.logout"],
+  ["get", "/api/v1/auth/user/me", "userAuth.getCurrentUser"],
+  ["patch", "/api/v1/auth/user/me", "userAuth.updateProfile", { name: "Jane New" }],
+  ["post", "/api/v1/auth/user/forgot-password", "userAuth.forgotPassword", { email: "jane@example.test" }],
+  ["post", "/api/v1/auth/user/reset-password", "userAuth.resetPassword", { token: "reset-token", password: "password123" }],
 
   ["get", "/api/v1/businesses", "business.listBusinesses"],
   ["get", "/api/v1/businesses/nearby?latitude=6.5&longitude=3.3", "businessResources.getNearby"],

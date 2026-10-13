@@ -19,6 +19,27 @@ export function businessWelcomeEmail({ ownerName, businessName }) {
 }
 
 /**
+ * Welcome email for consumer (user) registrations.
+ * @param {{ name: string }} options
+ */
+export function userWelcomeEmail({ name }) {
+  const displayName = name || "there";
+
+  return {
+    subject: "Welcome to LocalSpot",
+    text: `Hi ${displayName}, welcome to LocalSpot! You can now save your favourite local businesses and stay up to date with what's happening around you.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
+        <h2 style="margin: 0 0 12px;">Welcome to LocalSpot</h2>
+        <p>Hi ${displayName},</p>
+        <p>Your account has been created successfully.</p>
+        <p>You can now save your favourite local businesses and stay up to date with what's happening around you.</p>
+      </div>
+    `,
+  };
+}
+
+/**
  * Password reset email template — shared by both business and admin flows.
  *
  * @param {{ resetUrl: string, name: string }} options

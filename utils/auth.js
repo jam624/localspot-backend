@@ -70,6 +70,23 @@ export function generateResetToken() {
 }
 
 // ---------------------------------------------------------------------------
+// JWT shared helper
+// ---------------------------------------------------------------------------
+
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET must be configured in production");
+  }
+  return "localspot-dev-secret";
+}
+
+export function verifyToken(token) {
+  return jwt.verify(token, getJwtSecret());
+}
+
+// ---------------------------------------------------------------------------
 // JWT helpers — Business
 // ---------------------------------------------------------------------------
 
@@ -86,19 +103,6 @@ export function createBusinessToken(account) {
       expiresIn: process.env.JWT_EXPIRES_IN || "1d",
     }
   );
-}
-
-export function verifyToken(token) {
-  return jwt.verify(token, getJwtSecret());
-}
-
-function getJwtSecret() {
-  const secret = process.env.JWT_SECRET;
-  if (secret) return secret;
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("JWT_SECRET must be configured in production");
-  }
-  return "localspot-dev-secret";
 }
 
 /**
@@ -150,5 +154,39 @@ export function publicAdminAccount(admin) {
     isActive: Boolean(admin.is_active),
     lastLoginAt: admin.last_login_at,
     createdAt: admin.created_at,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// JWT helpers — Consumer User
+// ---------------------------------------------------------------------------
+
+export function createUserToken(user) {
+  const secret = getJwtSecret();
+  return jwt.sign(
+    {
+      sub: String(user.id),
+      type: "user",
+      email: user.email,
+    },
+    secret,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    }
+  );
+}
+
+/**
+ * Returns a safe, public-facing representation of a consumer user row.
+ */
+export function publicUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    status: user.status,
+    emailVerifiedAt: user.email_verified_at,
+    lastLoginAt: user.last_login_at,
+    createdAt: user.created_at,
   };
 }

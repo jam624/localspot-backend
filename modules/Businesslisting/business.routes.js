@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireBusinessAuth } from "../../middleware/businessAuth.middleware.js";
 import { requireAdminAuth } from "../../middleware/adminAuth.middleware.js";
+import { optionalUserAuth } from "../../middleware/userAuth.middleware.js";
 import * as controller from "./business.controller.js";
 import { validateActive, validateAdminCreate, validateAdminList, validateAdminUpdate, validateCreate, validateId, validateSearch, validateStatus, validateUpdate } from "./business.validator.js";
 
@@ -94,7 +95,7 @@ publicRouter.get("/:id/promotions",getBusinessPromotions);
 publicRouter.get("/:id/related",   getRelatedBusinesses);
 
 // README: GET /api/v1/businesses/:businessId — accepts numeric id or slug
-publicRouter.get("/:slug", controller.getBySlug);
+publicRouter.get("/:slug", optionalUserAuth, controller.getBySlug);
 
 export const ownerRouter = Router();
 ownerRouter.use(requireBusinessAuth);

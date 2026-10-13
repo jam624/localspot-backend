@@ -9,8 +9,8 @@ split into migration files later.
 - Database engine: MySQL, using `mysql2`.
 - Primary keys use `BIGINT UNSIGNED AUTO_INCREMENT` for simple class/project setup.
 - Public IDs/slugs can still be exposed through the API instead of raw numeric IDs.
-- Favorites are not stored as a user table in V1 because the README recommends
-  browser `localStorage`; favorite add/remove actions are tracked through `events`.
+- Consumer accounts are stored in `users`; favorites and reservations are
+  persisted and scoped to those accounts.
 - Analytics are event-driven. Business dashboards and admin reports can aggregate
   data from `events`, `advertisements`, and `revenue_transactions`.
 

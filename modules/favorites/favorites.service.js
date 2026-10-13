@@ -1,38 +1,35 @@
 /**
- * Favorites Service
+ * Favorites Service (V2 — with consumer auth)
  *
- * LocalSpot V1 has no consumer accounts (see PRD Module 6 / dbschema.md),
- * so favorites are NOT stored in a dedicated table. The browser keeps the
- * list of favorited business IDs in localStorage. This service handles the
- * two things the backend is actually responsible for:
+ * Favorites are now stored server-side in the `user_favorites` table.
+ * Logged-in users get persistent favorites tied to their account.
  *
- *   1. Recording favorite_add / favorite_remove as rows in the shared
- *      `events` table. The analytics module already aggregates these —
- *      see config/statement.js: businessEventSummary (favorites count on
- *      the business dashboard) and adminMostSavedBusinesses.
- *   2. Given the list of IDs the browser has saved, returning full listing
- *      cards so the "My Favorites" page has something to render.
+ * The service also:
+ *   1. Records favorite_add / favorite_remove events in the `events` table
+ *      (analytics still works exactly as before).
+ *   2. Provides bulk-fetch of listing cards for the "My Favorites" page,
+ *      driven by the user's DB rows instead of a client-supplied ID list.
  *
  * Follows the same raw SQL + query() pattern as discovery.service.js.
  */
 
+import pool from "../../config/db.js";
 import { query } from "../../config/db.js";
+import { userFavoriteStatements } from "../../config/statement.js";
 import { notFound } from "../../utils/errors.js";
+import { parsePagination, paginationMeta } from "../../utils/pagination.js";
 
 /** Listing statuses that are visible to unauthenticated consumers. */
 const PUBLIC_STATUSES = ["published", "active"];
 const PUBLIC_STATUS_PLACEHOLDERS = PUBLIC_STATUSES.map(() => "?").join(", ");
 
 // ---------------------------------------------------------------------------
-// Open-now helper (mirrors discovery.service.js's buildOpenNowSubquery so
-// favorites cards show the same "open/closed" status as every other listing
-// card, per PRD 8.6). Duplicated locally rather than imported, following
-// this project's convention of self-contained module services.
+// Open-now helper (mirrors discovery.service.js)
 // ---------------------------------------------------------------------------
 
 function buildOpenNowSubquery() {
   const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Sun … 6=Sat
+  const dayOfWeek = now.getDay();
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
   const ss = String(now.getSeconds()).padStart(2, "0");
@@ -56,9 +53,7 @@ function buildOpenNowSubquery() {
 }
 
 // ---------------------------------------------------------------------------
-// Serialiser — mirrors discovery.service.js's serializeBusiness field names
-// (trimmed to what a listing card needs) so the frontend can reuse the same
-// card component for favorites as it does for search/category results.
+// Serialiser — mirrors discovery.service.js field names
 // ---------------------------------------------------------------------------
 
 function serializeFavoriteBusiness(row) {
@@ -90,23 +85,11 @@ function serializeFavoriteBusiness(row) {
 }
 
 // ---------------------------------------------------------------------------
-// Service: bulk-fetch businesses for the "My Favorites" page
+// Core card-fetch helper — shared by both user-favorites and legacy bulk fetch
 // ---------------------------------------------------------------------------
 
-/**
- * Given an array of business IDs (from the browser's localStorage list),
- * returns listing cards for the ones that are still publicly visible —
- * a business the user favorited may since have been unpublished or
- * deleted, and those are silently dropped rather than erroring.
- *
- * Preserves the order the IDs were requested in.
- *
- * @param {number[]} ids
- */
-export async function getFavoriteBusinesses(ids) {
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return { businesses: [] };
-  }
+async function fetchBusinessCards(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
 
   const idPlaceholders = ids.map(() => "?").join(", ");
   const orderPlaceholders = ids.map(() => "?").join(", ");
@@ -135,22 +118,54 @@ export async function getFavoriteBusinesses(ids) {
     [...openParams, ...ids, ...PUBLIC_STATUSES, ...ids]
   );
 
-  return { businesses: rows.map(serializeFavoriteBusiness) };
+  return rows.map(serializeFavoriteBusiness);
 }
 
 // ---------------------------------------------------------------------------
-// Service: add / remove favorite (event logging)
+// Service: list favorites for authenticated user
 // ---------------------------------------------------------------------------
 
 /**
- * Logs a favorite_add event for a business. Verifies the business exists
- * and is publicly visible first, so the events table doesn't fill up with
- * favorites against invalid or unpublished business IDs.
+ * Returns favorites for the logged-in user as listing cards, with pagination.
+ * Businesses that have since been unpublished are silently dropped.
  *
- * @param {number} businessId
- * @param {{ visitorId?: string, ipAddress?: string, userAgent?: string }} meta
+ * @param {number} userId
+ * @param {object} rawQuery
  */
-export async function addFavorite(businessId, meta = {}) {
+export async function getUserFavorites(userId, rawQuery = {}) {
+  const { page, limit, offset } = parsePagination(rawQuery);
+  const [countRows] = await pool.execute(userFavoriteStatements.countByUser, [userId]);
+  const total = Number(countRows[0]?.total || 0);
+
+  const [idRows] = await pool.execute(
+    `SELECT uf.business_id
+     FROM user_favorites uf
+     JOIN businesses b ON b.id = uf.business_id
+     WHERE uf.user_id = ? AND b.listing_status IN (${PUBLIC_STATUS_PLACEHOLDERS})
+     ORDER BY uf.created_at DESC LIMIT ? OFFSET ?`,
+    [userId, ...PUBLIC_STATUSES, limit, offset]
+  );
+  const ids = idRows.map((r) => Number(r.business_id));
+  const businesses = await fetchBusinessCards(ids);
+  return {
+    businesses,
+    meta: paginationMeta(page, limit, total),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Service: add / remove favorite
+// ---------------------------------------------------------------------------
+
+/**
+ * Adds a business to the user's server-side favorites and logs the event.
+ *
+ * @param {number} userId
+ * @param {number} businessId
+ * @param {{ ipAddress?: string, userAgent?: string }} meta
+ */
+export async function addFavorite(userId, businessId, meta = {}) {
+  // Verify the business is publicly visible
   const rows = await query(
     `SELECT id FROM businesses
      WHERE id = ? AND listing_status IN (${PUBLIC_STATUS_PLACEHOLDERS})
@@ -162,27 +177,46 @@ export async function addFavorite(businessId, meta = {}) {
     throw notFound("Business not found");
   }
 
-  await query(
-    `INSERT INTO events (event_type, business_id, visitor_id, ip_address, user_agent)
-     VALUES ('favorite_add', ?, ?, ?, ?)`,
-    [businessId, meta.visitorId || null, meta.ipAddress || null, meta.userAgent || null]
-  );
+  // Upsert the favorite (INSERT IGNORE handles duplicates gracefully)
+  const [favoriteResult] = await pool.execute(userFavoriteStatements.add, [userId, businessId]);
+
+  if (favoriteResult.affectedRows) {
+    await query(
+      `INSERT INTO events (event_type, business_id, user_id, ip_address, user_agent)
+       VALUES ('favorite_add', ?, ?, ?, ?)`,
+      [businessId, userId, meta.ipAddress || null, meta.userAgent || null]
+    );
+  }
 }
 
 /**
- * Logs a favorite_remove event for a business. Deliberately does NOT check
- * that the business still exists/is published — a user should always be
- * able to unfavorite something in their browser, even if the listing was
- * taken down after they saved it. events.business_id is nullable with
- * ON DELETE SET NULL, so this is safe either way.
+ * Removes a business from the user's favorites and logs the event.
  *
+ * @param {number} userId
  * @param {number} businessId
- * @param {{ visitorId?: string, ipAddress?: string, userAgent?: string }} meta
+ * @param {{ ipAddress?: string, userAgent?: string }} meta
  */
-export async function removeFavorite(businessId, meta = {}) {
-  await query(
-    `INSERT INTO events (event_type, business_id, visitor_id, ip_address, user_agent)
-     VALUES ('favorite_remove', (SELECT id FROM businesses WHERE id = ?), ?, ?, ?)`,
-    [businessId, meta.visitorId || null, meta.ipAddress || null, meta.userAgent || null]
-  );
+export async function removeFavorite(userId, businessId, meta = {}) {
+  const [favoriteResult] = await pool.execute(userFavoriteStatements.remove, [userId, businessId]);
+
+  if (favoriteResult.affectedRows) {
+    await query(
+      `INSERT INTO events (event_type, business_id, user_id, ip_address, user_agent)
+       VALUES ('favorite_remove', (SELECT id FROM businesses WHERE id = ?), ?, ?, ?)`,
+      [businessId, userId, meta.ipAddress || null, meta.userAgent || null]
+    );
+  }
+}
+
+/**
+ * Checks whether a specific user has favorited a specific business.
+ * Used by optionalUserAuth-protected endpoints to return isFavorited.
+ *
+ * @param {number} userId
+ * @param {number} businessId
+ * @returns {Promise<boolean>}
+ */
+export async function isFavorited(userId, businessId) {
+  const [rows] = await pool.execute(userFavoriteStatements.exists, [userId, businessId]);
+  return rows.length > 0;
 }

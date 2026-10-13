@@ -41,6 +41,12 @@ const protectedEndpoints = [
   ["get", "/api/v1/auth/admin/me"],
   ["post", "/api/v1/auth/business/logout"],
   ["get", "/api/v1/auth/business/me"],
+  ["post", "/api/v1/auth/user/logout"],
+  ["get", "/api/v1/auth/user/me"],
+  ["patch", "/api/v1/auth/user/me"],
+  ["get", "/api/v1/favorites"],
+  ["post", "/api/v1/favorites/1"],
+  ["delete", "/api/v1/favorites/1"],
   ["get", "/api/v1/analytics/business"],
   ...[
     "overview",

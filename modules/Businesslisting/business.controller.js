@@ -1,5 +1,6 @@
 import * as Business from "./business.model.js";
 import { getLocalDayAndMinute, isOpenAt } from "./openingHours.js";
+import { isFavorited } from "../favorites/favorites.service.js";
 
 const notFound = (res) => res.status(404).json({ success: false, message: "Listing not found" });
 const incomplete = (res, missing) => res.status(422).json({ success: false, message: "Listing is incomplete", missing });
@@ -22,8 +23,12 @@ export async function getBySlug(req, res, next) {
     const key = req.params.slug ?? req.params.idOrSlug ?? req.params.id;
     const business = await Business.findPublicByIdOrSlug(key);
     if (!business) return res.status(404).json({ success: false, message: "Business not found" });
-    Business.incrementViews(business.id).catch((error) => console.error("Failed to record business view:", error.message));
-    res.json({ success: true, data: publicShape(business, true) });
+    Business.incrementViews(business.id, req.user?.id || null).catch((error) => console.error("Failed to record business view:", error.message));
+    let favorited = false;
+    if (req.user?.id) {
+      favorited = await isFavorited(req.user.id, business.id).catch(() => false);
+    }
+    res.json({ success: true, data: { ...publicShape(business, true), isFavorited: favorited } });
   } catch (error) { next(error); }
 }
 

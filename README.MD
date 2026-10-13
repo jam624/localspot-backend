@@ -325,44 +325,30 @@ longitude
 
 ---
 
-# 9. Favorites
+# 9. Consumer Accounts, Favorites, and Reservations
 
-The PRD explicitly says favorites are stored in `localStorage`.
+Consumer accounts use the `/api/v1/auth/user` endpoints. Authenticated requests
+send the returned JWT as `Authorization: Bearer <token>`; clients must not send
+their own `userId` to identify the account.
 
-Therefore **you don't actually need a database-backed favorites API in V1**.
+Favorites are persisted per account:
 
-The browser can maintain:
+| Method | Endpoint | Purpose |
+| ------ | -------- | ------- |
+| GET | `/api/v1/favorites` | List the current user's saved businesses |
+| POST | `/api/v1/favorites/:businessId` | Save a business |
+| DELETE | `/api/v1/favorites/:businessId` | Remove a saved business |
 
-```javascript
-localStorage.setItem(
-  "localspot_favorites",
-  JSON.stringify([...])
-);
-```
+Reservations are also account-scoped:
 
-But for analytics, record the action:
-
-```http
-POST /api/v1/events
-```
-
-with:
-
-```json
-{
-  "event": "favorite_add",
-  "businessId": "123"
-}
-```
-
-and:
-
-```json
-{
-  "event": "favorite_remove",
-  "businessId": "123"
-}
-```
+| Method | Endpoint | Purpose |
+| ------ | -------- | ------- |
+| POST | `/api/v1/reservations` | Request a reservation |
+| GET | `/api/v1/reservations` | List the current user's reservations |
+| GET | `/api/v1/reservations/:id` | View one of the current user's reservations |
+| PATCH | `/api/v1/reservations/:id/cancel` | Cancel a pending or confirmed reservation |
+| GET | `/api/v1/business/reservations` | List reservations for the authenticated business account |
+| PATCH | `/api/v1/business/reservations/:id/status` | Confirm, reject, or complete an owned reservation |
 
 ---
 
