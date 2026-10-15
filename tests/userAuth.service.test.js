@@ -30,7 +30,7 @@ describe("userAuth.service", () => {
   beforeEach(() => {
     execute.mockReset();
     getConnection.mockReset();
-    sendMail.mockReset();
+    sendMail.mockReset().mockResolvedValue(true);
   });
 
   describe("createUserAccount", () => {
@@ -79,7 +79,7 @@ describe("userAuth.service", () => {
           email: "john@example.com",
           password: "password123",
         })
-      ).rejects.toMatchObject({ status: 409 });
+      ).rejects.toMatchObject({ statusCode: 409 });
     });
   });
 
@@ -133,7 +133,7 @@ describe("userAuth.service", () => {
           email: "john@example.com",
           password: "wrongPassword",
         })
-      ).rejects.toMatchObject({ status: 401 });
+      ).rejects.toMatchObject({ statusCode: 401 });
     });
   });
 
