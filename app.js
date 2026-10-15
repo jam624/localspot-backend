@@ -51,7 +51,7 @@ import adminCoreRoutes from "./modules/admin-core/routes/adminCore.routes.js";
 
 const app = express();
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "")
+const allowedOrigins = (process.env.CORS_ORIGIN || "https://localspot-sage.vercel.app")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
